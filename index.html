@@ -272,7 +272,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         },
                         body: JSON.stringify({
                             messages: [...messages.slice(-5), userMessage],
-                            context: `You are a helpful business assistant for a GST billing system. Answer questions based on the following business data:\n\n${context}\n\nProvide concise, helpful answers with numbers and insights.`
+                            context: context
                         })
                     });
                     
