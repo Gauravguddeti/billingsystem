@@ -14,14 +14,39 @@
         * { font-family: 'Inter', sans-serif; }
         @media print {
             .no-print { display: none !important; }
-            body { margin: 0; padding: 20px; }
-            .print-container { width: 100%; max-width: 210mm; margin: 0 auto; }
-            .invoice-table { border-collapse: collapse; width: 100%; }
-            .invoice-table th, .invoice-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-            .print-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-            .print-footer { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
+            body { margin: 0; padding: 15px; font-size: 11px; }
+            .print-container { 
+                width: 100%; 
+                max-width: 210mm; 
+                margin: 0 auto; 
+                page-break-after: avoid;
+            }
+            .invoice-table { 
+                border-collapse: collapse; 
+                width: 100%; 
+                font-size: 10px;
+                margin: 10px 0;
+            }
+            .invoice-table th, .invoice-table td { 
+                border: 1px solid #000; 
+                padding: 4px 6px; 
+                text-align: left; 
+                word-wrap: break-word;
+            }
+            .print-header { 
+                border-bottom: 2px solid #000; 
+                padding-bottom: 8px; 
+                margin-bottom: 12px; 
+            }
+            .print-footer { 
+                border-top: 2px solid #000; 
+                padding-top: 8px; 
+                margin-top: 12px; 
+            }
+            h1, h2, h3 { margin: 5px 0; }
+            p { margin: 2px 0; }
         }
-        @media screen { .print-container { display: none; } }
+        @media screen { .print-container { display: block; margin-top: 20px; } }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .card-hover { transition: all 0.3s ease; }
@@ -454,6 +479,14 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [editingStock, setEditingStock] = useState(null);
             const [paymentModal, setPaymentModal] = useState(null);
             
+            // Category state
+            const [categories, setCategories] = useState([]);
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [showCategoryForm, setShowCategoryForm] = useState(false);
+            const [categoryFormData, setCategoryFormData] = useState({name:'',description:'',default_hsn:'33074100',has_mrp:false});
+            const [editingCategory, setEditingCategory] = useState(null);
+            const [categoryFilter, setCategoryFilter] = useState('');
+            
             useEffect(() => {
                 loadAllData();
             }, []);
@@ -465,7 +498,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         loadProfile(),
                         loadCustomers(),
                         loadProducts(),
-                        loadInvoices()
+                        loadInvoices(),
+                        loadCategories()
                     ]);
                     await generateNextInvoiceNumber();
                 } catch (err) {
@@ -528,10 +562,19 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
             };
             
+            const loadCategories = async () => {
+                const { data } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('name');
+                if (data) setCategories(data);
+            };
+            
             const loadInvoices = async () => {
                 const { data } = await supabase
                     .from('invoices')
-                    .select('*')
+                    .select('*, categories(id, name)')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
                 
@@ -578,6 +621,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             amount_paid: inv.amount_paid || 0,
                             payment_date: inv.payment_date,
                             payment_notes: inv.payment_notes,
+                            category: inv.categories,
+                            category_id: inv.category_id,
                             id: inv.id
                         };
                     }));
@@ -619,7 +664,66 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 if (!error) alert('Settings saved!');
             };
             
+            const saveCategory = async () => {
+                if (!categoryFormData.name) {
+                    alert('Category name is required!');
+                    return;
+                }
+                
+                if (editingCategory) {
+                    const { error } = await supabase
+                        .from('categories')
+                        .update({
+                            name: categoryFormData.name,
+                            description: categoryFormData.description,
+                            default_hsn: categoryFormData.default_hsn,
+                            has_mrp: categoryFormData.has_mrp
+                        })
+                        .eq('id', editingCategory.id);
+                    if (!error) {
+                        await loadCategories();
+                        setShowCategoryForm(false);
+                        setEditingCategory(null);
+                        setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false});
+                        alert('Category updated!');
+                    }
+                } else {
+                    const { error } = await supabase
+                        .from('categories')
+                        .insert({
+                            user_id: user.id,
+                            name: categoryFormData.name,
+                            description: categoryFormData.description,
+                            default_hsn: categoryFormData.default_hsn,
+                            has_mrp: categoryFormData.has_mrp
+                        });
+                    if (!error) {
+                        await loadCategories();
+                        setShowCategoryForm(false);
+                        setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false});
+                        alert('Category added!');
+                    }
+                }
+            };
+            
+            const deleteCategory = async (id) => {
+                if (!confirm('Delete this category? Related invoices will lose category reference.')) return;
+                const { error } = await supabase
+                    .from('categories')
+                    .delete()
+                    .eq('id', id);
+                if (!error) {
+                    await loadCategories();
+                    alert('Category deleted!');
+                }
+            };
+            
             const saveInvoice = async () => {
+                if (!selectedCategory) {
+                    alert('Please select a category first!');
+                    return;
+                }
+                
                 const tots = calcTotals();
                 
                 const { data: invData, error: invError } = await supabase
@@ -644,7 +748,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         total_items: tots.ti,
                         amount_words: tots.words,
                         payment_status: 'unpaid',
-                        amount_paid: 0
+                        amount_paid: 0,
+                        category_id: selectedCategory.id
                     })
                     .select()
                     .single();
@@ -696,7 +801,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
                 
                 await loadAllData();
-                window.print();
+                alert('Invoice saved successfully!');
+                // Stay in invoice view to see the saved bill
             };
             
             const updatePaymentStatus = async (invoice, status, amountPaid, notes) => {
@@ -725,23 +831,70 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const calcLine = (item) => {
                 const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
                 let finalRate = r - (r * d / 100);
+                
                 if(taxInc) {
-                    const base = finalRate/1.05, gst = finalRate-base;
-                    return {base:(base*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:(finalRate*q).toFixed(2),unitBase:base.toFixed(2)};
+                    // Tax included: rate entered is final price with GST
+                    // Calculate backwards: base = rate * 100/105
+                    const base = finalRate * 100 / 105;
+                    const gst = finalRate - base;
+                    return {
+                        base: (base * q).toFixed(2),
+                        cgst: ((gst / 2) * q).toFixed(2),
+                        sgst: ((gst / 2) * q).toFixed(2),
+                        tot: (finalRate * q).toFixed(2),
+                        unitBase: base.toFixed(2)
+                    };
                 }
-                const gst = finalRate*0.05;
-                return {base:(finalRate*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:((finalRate+gst)*q).toFixed(2),unitBase:finalRate.toFixed(2)};
+                
+                // Normal bill: No GST calculation
+                return {
+                    base: (finalRate * q).toFixed(2),
+                    cgst: '0.00',
+                    sgst: '0.00',
+                    tot: (finalRate * q).toFixed(2),
+                    unitBase: finalRate.toFixed(2)
+                };
             };
             
             const calcTotals = () => {
                 let sub=0,cg=0,sg=0,tq=0,ti=items.filter(i=>i.name).length;
-                items.forEach(i=>{if(i.name){const c=calcLine(i);sub+=parseFloat(c.base);cg+=parseFloat(c.cgst);sg+=parseFloat(c.sgst);tq+=parseFloat(i.qty)||0;}});
+                items.forEach(i=>{
+                    if(i.name){
+                        const c=calcLine(i);
+                        sub+=parseFloat(c.base);
+                        cg+=parseFloat(c.cgst);
+                        sg+=parseFloat(c.sgst);
+                        tq+=parseFloat(i.qty)||0;
+                    }
+                });
+                
                 const discAmt = (sub * (parseFloat(discount)||0) / 100);
                 const afterDisc = sub - discAmt;
-                const cgstFinal = (afterDisc * 0.025);
-                const sgstFinal = (afterDisc * 0.025);
-                const gt = afterDisc + cgstFinal + sgstFinal;
-                return {sub:sub.toFixed(2),discAmt:discAmt.toFixed(2),afterDisc:afterDisc.toFixed(2),cg:cgstFinal.toFixed(2),sg:sgstFinal.toFixed(2),gt:gt.toFixed(2),tq,ti,words:numberToWords(gt)};
+                
+                let cgstFinal, sgstFinal, gt;
+                if(taxInc) {
+                    // Tax bill: GST already calculated in items
+                    cgstFinal = (afterDisc * 0.025);
+                    sgstFinal = (afterDisc * 0.025);
+                    gt = afterDisc + cgstFinal + sgstFinal;
+                } else {
+                    // Normal bill: No GST
+                    cgstFinal = 0;
+                    sgstFinal = 0;
+                    gt = afterDisc;
+                }
+                
+                return {
+                    sub:sub.toFixed(2),
+                    discAmt:discAmt.toFixed(2),
+                    afterDisc:afterDisc.toFixed(2),
+                    cg:cgstFinal.toFixed(2),
+                    sg:sgstFinal.toFixed(2),
+                    gt:gt.toFixed(2),
+                    tq,
+                    ti,
+                    words:numberToWords(gt)
+                };
             };
             
             const tots = calcTotals();
@@ -789,30 +942,102 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     // Main Content
                     view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
                     view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
-                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'Business Settings'),
-                        h('div',{className:'max-w-3xl space-y-6'},
-                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:3})),
-                            h('div',{className:'grid grid-cols-2 gap-6'},
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'⚙️ Settings'),
+                        
+                        // Business Settings Section
+                        h('div',{className:'mb-12'},
+                            h('h3',{className:'text-2xl font-bold mb-4 text-gray-800'},'Business Information'),
+                            h('div',{className:'max-w-3xl space-y-6'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:3})),
+                                h('div',{className:'grid grid-cols-2 gap-6'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                                ),
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{className:'grid grid-cols-2 gap-6'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                                ),
+                                h('button',{onClick:saveProfile,className:'gradient-bg text-white px-8 py-3 rounded-lg hover:opacity-90 transition font-semibold text-lg'},'💾 Save Business Settings')
+                            )
+                        ),
+                        
+                        // Categories Section
+                        h('div',{className:'border-t-2 pt-8'},
+                            h('div',{className:'flex justify-between items-center mb-4'},
+                                h('h3',{className:'text-2xl font-bold text-gray-800'},'Bill Categories'),
+                                h('button',{onClick:()=>{setShowCategoryForm(true);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Category')
                             ),
-                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                            h('div',{className:'grid grid-cols-2 gap-6'},
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                            showCategoryForm&&h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
+                                h('h4',{className:'font-bold mb-4 text-lg'},(editingCategory?'Edit':'Add')+' Category'),
+                                h('div',{className:'space-y-4'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Category Name'),h('input',{type:'text',value:categoryFormData.name,onChange:e=>setCategoryFormData({...categoryFormData,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'e.g., Retail Bills, Wholesale Bills'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Description (Optional)'),h('textarea',{value:categoryFormData.description,onChange:e=>setCategoryFormData({...categoryFormData,description:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:2,placeholder:'Brief description of this category'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Default HSN Code'),h('input',{type:'text',value:categoryFormData.default_hsn,onChange:e=>setCategoryFormData({...categoryFormData,default_hsn:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'33074100'})),
+                                    h('div',{className:'flex items-center gap-3'},
+                                        h('label',{className:'font-semibold text-gray-700'},'Has MRP Column'),
+                                        h('input',{type:'checkbox',checked:categoryFormData.has_mrp,onChange:e=>setCategoryFormData({...categoryFormData,has_mrp:e.target.checked}),className:'w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500'})
+                                    ),
+                                    h('div',{className:'flex gap-3'},
+                                        h('button',{onClick:saveCategory,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
+                                        h('button',{onClick:()=>{setShowCategoryForm(false);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
+                                    )
+                                )
                             ),
-                            h('button',{onClick:saveProfile,className:'gradient-bg text-white px-8 py-3 rounded-lg hover:opacity-90 transition font-semibold text-lg'},'💾 Save Settings')
+                            h('div',{className:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'},
+                                categories.map(cat=>
+                                    h('div',{key:cat.id,className:'bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 transition'},
+                                        h('div',{className:'flex justify-between items-start mb-2'},
+                                            h('h4',{className:'font-bold text-lg text-gray-800'},cat.name),
+                                            h('div',{className:'flex gap-2'},
+                                                h('button',{onClick:()=>{setEditingCategory(cat);setCategoryFormData({name:cat.name,description:cat.description||'',default_hsn:cat.default_hsn||'33074100',has_mrp:cat.has_mrp||false});setShowCategoryForm(true)},className:'text-blue-500 hover:text-blue-700 font-bold'},'✎'),
+                                                h('button',{onClick:()=>deleteCategory(cat.id),className:'text-red-500 hover:text-red-700 font-bold'},'✕')
+                                            )
+                                        ),
+                                        cat.description&&h('p',{className:'text-gray-600 text-sm mb-2'},cat.description),
+                                        h('div',{className:'flex gap-2 text-xs'},
+                                            h('span',{className:'bg-gray-100 text-gray-700 px-2 py-1 rounded'},'HSN: '+cat.default_hsn),
+                                            cat.has_mrp&&h('span',{className:'bg-green-100 text-green-700 px-2 py-1 rounded'},'Has MRP')
+                                        )
+                                    )
+                                )
+                            )
                         )
-                    ):view==='invoice'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
-                        h('div',{className:'flex justify-between mb-6 pb-6 border-b-2'},
-                            h('div',{className:'flex gap-4'},
-                                h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
-                                h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save & Print')
+                    ):view==='invoice'?(!selectedCategory?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'📝 Select Bill Category'),
+                        categories.length===0?h('div',{className:'text-center py-12'},
+                            h('p',{className:'text-gray-600 mb-4'},'No categories found. Please add categories in Settings.'),
+                            h('button',{onClick:()=>setView('settings'),className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Go to Settings')
+                        ):h('div',{className:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'},
+                            categories.map(cat=>
+                                h('div',{key:cat.id,onClick:()=>{setSelectedCategory(cat);setItems([{id:Date.now(),name:'',hsn:cat.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-lg p-6 cursor-pointer card-hover border-2 border-transparent hover:border-purple-500 transition'},
+                                    h('div',{className:'text-4xl mb-3'},'📋'),
+                                    h('h3',{className:'text-xl font-bold text-gray-800 mb-2'},cat.name),
+                                    cat.description&&h('p',{className:'text-gray-600 text-sm mb-3'},cat.description),
+                                    h('div',{className:'flex gap-2 text-xs'},
+                                        h('span',{className:'bg-purple-100 text-purple-700 px-2 py-1 rounded'},'HSN: '+cat.default_hsn),
+                                        cat.has_mrp&&h('span',{className:'bg-green-100 text-green-700 px-2 py-1 rounded'},'Has MRP')
+                                    )
+                                )
+                            )
+                        )
+                    ):h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('div',{className:'flex justify-between items-center mb-6 pb-6 border-b-2'},
+                            h('div',{},
+                                h('div',{className:'flex items-center gap-3 mb-2'},
+                                    h('button',{onClick:()=>{setSelectedCategory(null);setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'text-gray-500 hover:text-gray-700 transition'},'← Back'),
+                                    h('h3',{className:'text-xl font-bold gradient-text'},selectedCategory.name)
+                                ),
+                                h('div',{className:'flex gap-4'},
+                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
+                                    h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>window.print(),className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
+                                )
                             ),
                             h('div',{className:'flex items-center gap-3'},
-                                h('label',{className:'font-semibold text-gray-700'},'Tax Included?'),
+                                h('label',{className:'font-semibold text-gray-700'},taxInc?'Tax Bill':'Normal Bill'),
                                 h('button',{onClick:()=>setTaxInc(!taxInc),className:`relative inline-flex h-10 w-20 items-center rounded-full transition ${taxInc?'bg-green-500':'bg-gray-300'}`},h('span',{className:`inline-block h-8 w-8 rounded-full bg-white transform transition ${taxInc?'translate-x-11':'translate-x-1'}`})),
                                 h('span',{className:'font-bold'},taxInc?'ON':'OFF')
                             )
@@ -862,7 +1087,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 h('select',{value:it.freeUnit||'Pcs',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeUnit:e.target.value}:i)),className:'w-20 px-2 py-2 border-2 border-gray-200 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dnz'},'Dnz'),h('option',{value:'Grs'},'Grs'))
                                             )
                                         ),
-                                        h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-28 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01})),
+                                        h('td',{className:'border border-gray-300 p-3'},
+                                            h('div',{className:'flex flex-col gap-1'},
+                                                h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-28 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:taxInc?'Final Price':'Rate'}),
+                                                taxInc&&parseFloat(it.rate)>0&&h('span',{className:'text-xs text-gray-500'},'Base: ₹'+c.unitBase)
+                                            )
+                                        ),
                                         h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-20 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,min:0,max:100})),
                                         h('td',{className:'border border-gray-300 p-3 text-right font-bold text-purple-600'},'₹'+c.tot),
                                         h('td',{className:'border border-gray-300 p-3 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 hover:text-red-700 font-bold text-xl transition',disabled:items.length===1},'✕'))
@@ -1018,7 +1248,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
                             h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config.name),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config.address),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+config.gstin),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+config.phone),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+config.email)),
-                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'20px',fontWeight:'bold',margin:'0 0 10px 0'}},'TAX INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Date: '),invDate))
+                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'20px',fontWeight:'bold',margin:'0 0 10px 0'}},taxInc?'TAX INVOICE':'INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Date: '),invDate))
                         ),
                         h('div',{style:{marginBottom:'20px',padding:'10px',border:'1px solid #000'}},h('h3',{style:{fontSize:'14px',fontWeight:'bold',margin:'0 0 5px 0'}},'Bill To:'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},custName)),h('p',{style:{margin:'2px 0',fontSize:'12px'}},custAddr),custPhone&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+custPhone),custGST&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+custGST))
                     ),
@@ -1029,9 +1259,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'Discount ('+discount+'%):'),h('td',{colSpan:2,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
-                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.cg)),
-                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.sg)),
-                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'₹'+tots.gt))
+                            taxInc&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.cg)),
+                            taxInc&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.sg)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold',fontSize:'14px'}},'GRAND TOTAL:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold',fontSize:'14px'}},'₹'+tots.gt))
                         )
                     ),
                     h('div',{className:'print-footer'},h('p',{style:{fontSize:'12px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'12px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'Bank: '+config.bankName),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'A/C: '+config.accountNo),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'IFSC: '+config.ifsc)),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'12px',margin:'2px 0'}},'For '+config.name),h('div',{style:{height:'60px'}}),h('p',{style:{fontSize:'12px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'10px',marginTop:'20px',fontStyle:'italic'}},'Thank you for your business!'))
