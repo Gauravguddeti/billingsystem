@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart GST Billing System - LOCAL TEST</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 20px; }
+            .print-container { width: 100%; max-width: 210mm; margin: 0 auto; }
+            .invoice-table { border-collapse: collapse; width: 100%; }
+            .invoice-table th, .invoice-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            .print-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-footer { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
+        }
+        @media screen { .print-container { display: none; } }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chat-bubble { animation: fadeInUp 0.3s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; }
+        .status-paid { background-color: #d1fae5; color: #065f46; }
+        .status-unpaid { background-color: #fee2e2; color: #991b1b; }
+        .status-partial { background-color: #fef3c7; color: #92400e; }
+        .test-badge { position: fixed; top: 10px; right: 10px; background: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; z-index: 9999; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="test-badge no-print">🧪 LOCAL TEST MODE</div>
+    <div id="root"></div>
+    
+    <script>
+    (function() {
+        'use strict';
+        
+        const { useState, useEffect, useRef, createElement: h } = React;
+        const { render } = ReactDOM;
+        
+        // Mock data
+        const mockUser = { id: 'test-user-123', email: 'test@example.com' };
+        
+        const mockInvoices = [
+            {
+                id: 1,
+                invoiceNumber: 'INV-001',
+                date: '2026-01-15',
+                customer: { name: 'Acme Corp', address: '123 Business St, City', gstin: '29ABCDE1234F1Z5', phone: '9876543210' },
+                items: [
+                    { name: 'Product A', hsn: '33074100', qty: 10, unit: 'Pcs', rate: 500, freeQty: 0, freeUnit: 'Pcs', discount: 0 }
+                ],
+                taxInclusive: false,
+                discount: 0,
+                totals: { sub: '5000.00', discAmt: '0.00', afterDisc: '5000.00', cg: '125.00', sg: '125.00', gt: '5250.00', tq: 10, ti: 1, words: 'Five Thousand Two Hundred Fifty Rupees Only' },
+                payment_status: 'paid',
+                amount_paid: 5250,
+                payment_date: '2026-01-16',
+                payment_notes: 'Bank Transfer'
+            },
+            {
+                id: 2,
+                invoiceNumber: 'INV-002',
+                date: '2026-01-20',
+                customer: { name: 'Tech Solutions', address: '456 Tech Park, City', gstin: '29XYZAB5678G2H9', phone: '9876543211' },
+                items: [
+                    { name: 'Product B', hsn: '33074100', qty: 5, unit: 'Pcs', rate: 1000, freeQty: 1, freeUnit: 'Pcs', discount: 10 }
+                ],
+                taxInclusive: false,
+                discount: 5,
+                totals: { sub: '4500.00', discAmt: '225.00', afterDisc: '4275.00', cg: '106.88', sg: '106.88', gt: '4488.76', tq: 5, ti: 1, words: 'Four Thousand Four Hundred Eighty Eight Rupees Only' },
+                payment_status: 'partial',
+                amount_paid: 2000,
+                payment_date: null,
+                payment_notes: null
+            },
+            {
+                id: 3,
+                invoiceNumber: 'INV-003',
+                date: '2026-01-25',
+                customer: { name: 'Global Traders', address: '789 Trade Center, City', gstin: '', phone: '' },
+                items: [
+                    { name: 'Product C', hsn: '33074100', qty: 20, unit: 'Pcs', rate: 250, freeQty: 0, freeUnit: 'Pcs', discount: 0 }
+                ],
+                taxInclusive: false,
+                discount: 0,
+                totals: { sub: '5000.00', discAmt: '0.00', afterDisc: '5000.00', cg: '125.00', sg: '125.00', gt: '5250.00', tq: 20, ti: 1, words: 'Five Thousand Two Hundred Fifty Rupees Only' },
+                payment_status: 'unpaid',
+                amount_paid: 0,
+                payment_date: null,
+                payment_notes: null
+            }
+        ];
+        
+        const mockCustomers = [
+            { id: 1, name: 'Acme Corp', address: '123 Business St, City', gstin: '29ABCDE1234F1Z5', phone: '9876543210' },
+            { id: 2, name: 'Tech Solutions', address: '456 Tech Park, City', gstin: '29XYZAB5678G2H9', phone: '9876543211' },
+            { id: 3, name: 'Global Traders', address: '789 Trade Center, City', gstin: '', phone: '' }
+        ];
+        
+        const mockProducts = [
+            { id: 1, name: 'Product A', rate: 500 },
+            { id: 2, name: 'Product B', rate: 1000 },
+            { id: 3, name: 'Product C', rate: 250 }
+        ];
+        
+        // Helper functions
+        const numberToWords = (num) => {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            
+            if (num === 0) return 'Zero';
+            
+            const convert = (n) => {
+                if (n < 10) return ones[n];
+                if (n < 20) return teens[n - 10];
+                if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+                if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert(n % 100) : '');
+                if (n < 100000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
+                if (n < 10000000) return convert(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + convert(n % 100000) : '');
+                return convert(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + convert(n % 10000000) : '');
+            };
+            
+            const rupees = Math.floor(num);
+            const paise = Math.round((num - rupees) * 100);
+            let result = convert(rupees) + ' Rupees';
+            if (paise > 0) result += ' and ' + convert(paise) + ' Paise';
+            return result + ' Only';
+        };
+        
+        const getCurrentDate = () => new Date().toISOString().split('T')[0];
+        
+        // Mock AI Response
+        const getMockAIResponse = (question) => {
+            const q = question.toLowerCase();
+            if (q.includes('revenue') || q.includes('sales')) {
+                return "Your total revenue is ₹14,988.76 across 3 invoices. Revenue breakdown: ₹5,250 (paid), ₹4,488.76 (partial - ₹2,488.76 pending), and ₹5,250 (unpaid).";
+            }
+            if (q.includes('customer')) {
+                return "Your top customers are: 1) Acme Corp (₹5,250), 2) Global Traders (₹5,250), 3) Tech Solutions (₹4,488.76). You have 3 total customers.";
+            }
+            if (q.includes('unpaid') || q.includes('pending')) {
+                return "You have 1 fully unpaid invoice (₹5,250) and 1 partially paid invoice (₹2,488.76 pending). Total pending: ₹7,738.76";
+            }
+            if (q.includes('invoice')) {
+                return "You have created 3 invoices so far. Latest: INV-003 for Global Traders (₹5,250 - unpaid).";
+            }
+            return "I can help you with questions about revenue, customers, invoices, and pending payments. Try asking: 'What's my total revenue?' or 'Who are my top customers?'";
+        };
+        
+        // Auth Component
+        const AuthPage = ({ onAuthSuccess }) => {
+            const [email, setEmail] = useState('test@example.com');
+            const [password, setPassword] = useState('test123');
+            
+            const handleAuth = (e) => {
+                e.preventDefault();
+                onAuthSuccess(mockUser);
+            };
+            
+            return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
+                h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
+                    h('div', { className: 'text-center mb-8' },
+                        h('div', { className: 'text-5xl mb-3' }, '💼'),
+                        h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Smart GST Billing'),
+                        h('p', { className: 'text-gray-600' }, 'Local Test Mode')
+                    ),
+                    h('div', { className: 'bg-yellow-50 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg mb-4 text-sm' },
+                        h('p', { className: 'font-bold mb-1' }, '🧪 Test Credentials:'),
+                        h('p', {}, 'Email: test@example.com'),
+                        h('p', {}, 'Password: test123'),
+                        h('p', { className: 'text-xs mt-2 text-yellow-700' }, 'All data is stored in browser localStorage')
+                    ),
+                    h('form', { onSubmit: handleAuth, className: 'space-y-4' },
+                        h('div', {},
+                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
+                            h('input', {
+                                type: 'email',
+                                value: email,
+                                onChange: e => setEmail(e.target.value),
+                                required: true,
+                                className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
+                                placeholder: 'test@example.com'
+                            })
+                        ),
+                        h('div', {},
+                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Password'),
+                            h('input', {
+                                type: 'password',
+                                value: password,
+                                onChange: e => setPassword(e.target.value),
+                                required: true,
+                                className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
+                                placeholder: 'test123'
+                            })
+                        ),
+                        h('button', {
+                            type: 'submit',
+                            className: 'w-full gradient-bg text-white py-3 px-4 rounded-lg hover:opacity-90 transition font-medium text-lg'
+                        }, 'Login to Test')
+                    ),
+                    h('div', { className: 'mt-6 text-center text-sm text-gray-600' },
+                        h('p', {}, '✅ Features to test:'),
+                        h('ul', { className: 'text-left mt-2 space-y-1' },
+                            h('li', {}, '• Dashboard with charts'),
+                            h('li', {}, '• Create invoices'),
+                            h('li', {}, '• Payment tracking'),
+                            h('li', {}, '• AI Chatbot (mock responses)'),
+                            h('li', {}, '• Product management')
+                        )
+                    )
+                )
+            );
+        };
+        
+        // AI Chatbot Component
+        const AIChatbot = ({ invoices, customers, products }) => {
+            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi! I\'m your AI assistant. Ask me anything about your business data! (Mock responses for testing)' }]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+            
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+            
+            const sendMessage = () => {
+                if (!input.trim()) return;
+                
+                const userMessage = { role: 'user', content: input };
+                setMessages(prev => [...prev, userMessage]);
+                setInput('');
+                setLoading(true);
+                
+                setTimeout(() => {
+                    const aiResponse = getMockAIResponse(input);
+                    setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+                    setLoading(false);
+                }, 800);
+            };
+            
+            return h('div', { className: 'flex flex-col h-full' },
+                h('div', { className: 'flex-1 overflow-y-auto p-4 space-y-4' },
+                    messages.map((msg, idx) => 
+                        h('div', { key: idx, className: `chat-bubble flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}` },
+                            h('div', { className: `max-w-[80%] px-4 py-2 rounded-2xl ${msg.role === 'user' ? 'gradient-bg text-white' : 'bg-gray-100 text-gray-800'}` },
+                                h('p', { className: 'text-sm whitespace-pre-wrap' }, msg.content)
+                            )
+                        )
+                    ),
+                    loading && h('div', { className: 'flex justify-start' },
+                        h('div', { className: 'bg-gray-100 px-4 py-2 rounded-2xl' },
+                            h('div', { className: 'flex space-x-2' },
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce' }),
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '0.1s' } }),
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '0.2s' } })
+                            )
+                        )
+                    ),
+                    h('div', { ref: messagesEndRef })
+                ),
+                h('div', { className: 'border-t p-4' },
+                    h('div', { className: 'flex gap-2' },
+                        h('input', {
+                            type: 'text',
+                            value: input,
+                            onChange: e => setInput(e.target.value),
+                            onKeyPress: e => e.key === 'Enter' && sendMessage(),
+                            placeholder: 'Ask about your sales, customers, invoices...',
+                            className: 'flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                        }),
+                        h('button', {
+                            onClick: sendMessage,
+                            disabled: !input.trim() || loading,
+                            className: 'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 font-medium'
+                        }, '➤')
+                    )
+                )
+            );
+        };
+        
+        // Dashboard Component (same as before, but with mock data)
+        const Dashboard = ({ invoices, customers, products }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            
+            useEffect(() => {
+                if (chartRef.current && invoices.length > 0) {
+                    const ctx = chartRef.current.getContext('2d');
+                    
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                    
+                    const monthlyData = {};
+                    invoices.forEach(inv => {
+                        const month = inv.date.substring(0, 7);
+                        monthlyData[month] = (monthlyData[month] || 0) + parseFloat(inv.totals.gt);
+                    });
+                    
+                    const sortedMonths = Object.keys(monthlyData).sort().slice(-6);
+                    const values = sortedMonths.map(m => monthlyData[m]);
+                    
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: sortedMonths.map(m => {
+                                const [y, mo] = m.split('-');
+                                return new Date(y, mo - 1).toLocaleDateString('default', { month: 'short', year: 'numeric' });
+                            }),
+                            datasets: [{
+                                label: 'Revenue',
+                                data: values,
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '₹' + value.toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }, [invoices]);
+            
+            const totalRevenue = invoices.reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const paidRevenue = invoices.filter(i => i.payment_status === 'paid').reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const unpaidRevenue = invoices.filter(i => i.payment_status === 'unpaid').reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const partialRevenue = invoices.filter(i => i.payment_status === 'partial').reduce((sum, inv) => sum + (parseFloat(inv.totals.gt) - parseFloat(inv.amount_paid || 0)), 0);
+            
+            const topCustomers = {};
+            invoices.forEach(inv => {
+                topCustomers[inv.customer.name] = (topCustomers[inv.customer.name] || 0) + parseFloat(inv.totals.gt);
+            });
+            const sortedCustomers = Object.entries(topCustomers).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            return h('div', { className: 'space-y-6' },
+                h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6' },
+                    [
+                        { title: 'Total Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: '💰', color: 'from-blue-500 to-blue-600' },
+                        { title: 'Paid', value: `₹${paidRevenue.toLocaleString()}`, icon: '✅', color: 'from-green-500 to-green-600' },
+                        { title: 'Pending', value: `₹${(unpaidRevenue + partialRevenue).toLocaleString()}`, icon: '⏳', color: 'from-yellow-500 to-yellow-600' },
+                        { title: 'Total Invoices', value: invoices.length, icon: '📄', color: 'from-purple-500 to-purple-600' }
+                    ].map((stat, idx) =>
+                        h('div', { key: idx, className: 'bg-white rounded-xl shadow-lg p-6 card-hover' },
+                            h('div', { className: 'flex items-center justify-between' },
+                                h('div', {},
+                                    h('p', { className: 'text-gray-500 text-sm font-medium' }, stat.title),
+                                    h('p', { className: 'text-3xl font-bold text-gray-800 mt-2' }, stat.value)
+                                ),
+                                h('div', { className: `text-4xl bg-gradient-to-r ${stat.color} w-16 h-16 rounded-xl flex items-center justify-center` }, stat.icon)
+                            )
+                        )
+                    )
+                ),
+                
+                h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '📈 Revenue Trend'),
+                    h('div', { style: { height: '300px' } },
+                        h('canvas', { ref: chartRef })
+                    )
+                ),
+                
+                h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '🌟 Top Customers'),
+                    h('div', { className: 'space-y-3' },
+                        sortedCustomers.map(([name, amount], idx) =>
+                            h('div', { key: idx, className: 'flex items-center justify-between p-3 bg-gray-50 rounded-lg' },
+                                h('div', { className: 'flex items-center gap-3' },
+                                    h('div', { className: 'w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold' }, (idx + 1)),
+                                    h('span', { className: 'font-medium text-gray-800' }, name)
+                                ),
+                                h('span', { className: 'font-bold text-purple-600' }, `₹${amount.toLocaleString()}`)
+                            )
+                        )
+                    )
+                )
+            );
+        };
+        
+        // Main App Component (simplified for testing)
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('dashboard');
+            const [showChatbot, setShowChatbot] = useState(false);
+            const [invs, setInvs] = useState(mockInvoices);
+            const [custs, setCusts] = useState(mockCustomers);
+            const [prods, setProds] = useState(mockProducts);
+            
+            if (!user) {
+                return h(AuthPage, { onAuthSuccess: setUser });
+            }
+            
+            const NavButton = ({icon, label, viewName}) => 
+                h('button', {
+                    onClick: () => setView(viewName),
+                    className: `flex items-center gap-2 px-4 py-2 rounded-lg transition ${view === viewName ? 'gradient-bg text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`
+                }, icon, ' ', label);
+            
+            return h('div',{className:'no-print min-h-screen bg-gray-50'},
+                h('div',{className:'gradient-bg text-white shadow-xl'},
+                    h('div',{className:'container mx-auto px-6 py-4'},
+                        h('div',{className:'flex items-center justify-between'},
+                            h('div',{className:'flex items-center gap-3'},
+                                h('div',{className:'text-3xl'},'💼'),
+                                h('h1',{className:'text-2xl font-bold'},'Smart GST Billing - TEST MODE')
+                            ),
+                            h('div',{className:'flex items-center gap-4'},
+                                h('span',{className:'text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full'}, user.email),
+                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition'},'🤖 AI Assistant'),
+                                h('button',{onClick:()=>setUser(null),className:'bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition'},'Logout')
+                            )
+                        )
+                    )
+                ),
+                
+                h('div',{className:'container mx-auto px-6 py-6'},
+                    h('div',{className:'flex gap-4 mb-6 overflow-x-auto pb-2'},
+                        h(NavButton, {icon:'📊', label:'Dashboard', viewName:'dashboard'}),
+                        h(NavButton, {icon:'📝', label:'Invoice', viewName:'invoice'}),
+                        h(NavButton, {icon:'📦', label:'Products', viewName:'stock'}),
+                        h(NavButton, {icon:'📜', label:'History', viewName:'history'}),
+                        h(NavButton, {icon:'⚙️', label:'Settings', viewName:'settings'})
+                    ),
+                    
+                    view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
+                    h('div', { className: 'bg-white rounded-xl shadow-lg p-8' },
+                        h('h2', { className: 'text-3xl font-bold gradient-text mb-4' }, 
+                            view === 'invoice' ? '📝 Create Invoice' :
+                            view === 'stock' ? '📦 Product Management' :
+                            view === 'history' ? '📜 Invoice History' :
+                            '⚙️ Settings'
+                        ),
+                        h('p', { className: 'text-gray-600' }, 'Click on Dashboard to see the main features in action!')
+                    )
+                ),
+                
+                showChatbot && h('div',{className:'fixed right-0 top-0 w-96 h-screen bg-white shadow-2xl z-40 flex flex-col'},
+                    h('div',{className:'gradient-bg text-white p-4 flex items-center justify-between'},
+                        h('h3',{className:'text-xl font-bold'},'🤖 AI Assistant'),
+                        h('button',{onClick:()=>setShowChatbot(false),className:'text-white hover:text-gray-200 text-2xl'},'✕')
+                    ),
+                    h(AIChatbot, {invoices:invs, customers:custs, products:prods})
+                )
+            );
+        };
+        
+        render(h(App), document.getElementById('root'));
+        
+    })();
+    </script>
+</body>
+</html>

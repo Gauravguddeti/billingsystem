@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart GST Billing System - Cloud</title>
+    <title>Smart GST Billing System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 20px; }
@@ -19,17 +22,21 @@
             .print-footer { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
         }
         @media screen { .print-container { display: none; } }
-        .autocomplete-list {
-            position: absolute; z-index: 9999; background: white; border: 1px solid #ccc;
-            max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .autocomplete-item { padding: 8px 12px; cursor: pointer; }
-        .autocomplete-item:hover { background-color: #f0f0f0; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chat-bubble { animation: fadeInUp 0.3s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; }
+        .status-paid { background-color: #d1fae5; color: #065f46; }
+        .status-unpaid { background-color: #fee2e2; color: #991b1b; }
+        .status-partial { background-color: #fef3c7; color: #92400e; }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
     <div id="root"></div>
     
     <script>
@@ -42,6 +49,8 @@
         // Initialize Supabase
         const SUPABASE_URL = 'https://yylahhomjnijsybazxpt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bGFoaG9tam5panN5YmF6eHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTIzMDgsImV4cCI6MjA4NTYyODMwOH0.hkQmKxKSZivIzcEG4_3fVT5wrPbgSy9dL1Y2w44Gb5w';
+        // Note: Add your Groq API key here temporarily for testing
+        const GROQ_API_KEY = ''; // Add key here: gsk_...
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Helper functions
@@ -89,9 +98,7 @@
                     if (isLogin) {
                         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                         if (error) throw error;
-                        if (rememberMe) {
-                            localStorage.setItem('rememberMe', 'true');
-                        }
+                        if (rememberMe) localStorage.setItem('rememberMe', 'true');
                         onAuthSuccess(data.user);
                     } else {
                         const { data, error } = await supabase.auth.signUp({ email, password });
@@ -118,13 +125,14 @@
                 if (error) setError(error.message);
             };
             
-            return h('div', { className: 'min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600' },
-                h('div', { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-md' },
+            return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
+                h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
                     h('div', { className: 'text-center mb-8' },
+                        h('div', { className: 'text-5xl mb-3' }, '💼'),
                         h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Smart GST Billing'),
-                        h('p', { className: 'text-gray-600' }, isLogin ? 'Sign in to your account' : 'Create a new account')
+                        h('p', { className: 'text-gray-600' }, isLogin ? 'Welcome back!' : 'Get started for free')
                     ),
-                    error && h('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4' }, error),
+                    error && h('div', { className: 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm' }, error),
                     h('form', { onSubmit: handleAuth, className: 'space-y-4' },
                         h('div', {},
                             h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
@@ -133,7 +141,7 @@
                                 value: email,
                                 onChange: e => setEmail(e.target.value),
                                 required: true,
-                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                                className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
                                 placeholder: 'your@email.com'
                             })
                         ),
@@ -145,7 +153,7 @@
                                 onChange: e => setPassword(e.target.value),
                                 required: true,
                                 minLength: 6,
-                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                                className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
                                 placeholder: '••••••••'
                             })
                         ),
@@ -155,14 +163,14 @@
                                 id: 'remember',
                                 checked: rememberMe,
                                 onChange: e => setRememberMe(e.target.checked),
-                                className: 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                                className: 'h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded'
                             }),
                             h('label', { htmlFor: 'remember', className: 'ml-2 block text-sm text-gray-700' }, 'Remember me')
                         ),
                         h('button', {
                             type: 'submit',
                             disabled: loading,
-                            className: 'w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                            className: 'w-full gradient-bg text-white py-3 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium text-lg'
                         }, loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')),
                         h('div', { className: 'relative my-4' },
                             h('div', { className: 'absolute inset-0 flex items-center' },
@@ -175,15 +183,246 @@
                         h('button', {
                             type: 'button',
                             onClick: handleGoogleAuth,
-                            className: 'w-full bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2'
+                            className: 'w-full bg-white border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2'
                         }, '🔍 Google')
                     ),
                     h('div', { className: 'text-center mt-6' },
                         h('button', {
                             type: 'button',
                             onClick: () => { setIsLogin(!isLogin); setError(''); },
-                            className: 'text-blue-600 hover:text-blue-700 text-sm font-medium'
+                            className: 'text-purple-600 hover:text-purple-700 text-sm font-medium'
                         }, isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In")
+                    )
+                )
+            );
+        };
+        
+        // AI Chatbot Component
+        const AIChatbot = ({ invoices, customers, products, user }) => {
+            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi! I\'m your AI assistant. Ask me anything about your business data!' }]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+            
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+            
+            const generateContext = () => {
+                const totalRevenue = invoices.reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+                const paidInvoices = invoices.filter(i => i.payment_status === 'paid');
+                const unpaidInvoices = invoices.filter(i => i.payment_status === 'unpaid');
+                const topCustomers = {};
+                invoices.forEach(inv => {
+                    topCustomers[inv.customer.name] = (topCustomers[inv.customer.name] || 0) + parseFloat(inv.totals.gt);
+                });
+                const sortedCustomers = Object.entries(topCustomers).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                
+                return `Business Data Summary:
+- Total Invoices: ${invoices.length}
+- Total Revenue: ₹${totalRevenue.toFixed(2)}
+- Paid Invoices: ${paidInvoices.length}
+- Unpaid Invoices: ${unpaidInvoices.length}
+- Total Customers: ${customers.length}
+- Total Products: ${products.length}
+- Top 5 Customers: ${sortedCustomers.map(([name, amt]) => `${name} (₹${amt.toFixed(2)})`).join(', ')}
+
+Recent Invoices:
+${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.customer.name}, ₹${inv.totals.gt}, ${inv.payment_status}`).join('\n')}`;
+            };
+            
+            const sendMessage = async () => {
+                if (!input.trim()) return;
+                
+                const userMessage = { role: 'user', content: input };
+                setMessages(prev => [...prev, userMessage]);
+                setInput('');
+                setLoading(true);
+                
+                try {
+                    const context = generateContext();
+                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${GROQ_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'mixtral-8x7b-32768',
+                            messages: [
+                                { role: 'system', content: `You are a helpful business assistant for a GST billing system. Answer questions based on the following business data:\n\n${context}\n\nProvide concise, helpful answers with numbers and insights.` },
+                                ...messages.slice(-5),
+                                userMessage
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 500
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    const aiMessage = { role: 'assistant', content: data.choices[0].message.content };
+                    setMessages(prev => [...prev, aiMessage]);
+                } catch (err) {
+                    setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            return h('div', { className: 'flex flex-col h-full' },
+                h('div', { className: 'flex-1 overflow-y-auto p-4 space-y-4' },
+                    messages.map((msg, idx) => 
+                        h('div', { key: idx, className: `chat-bubble flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}` },
+                            h('div', { className: `max-w-[80%] px-4 py-2 rounded-2xl ${msg.role === 'user' ? 'gradient-bg text-white' : 'bg-gray-100 text-gray-800'}` },
+                                h('p', { className: 'text-sm whitespace-pre-wrap' }, msg.content)
+                            )
+                        )
+                    ),
+                    loading && h('div', { className: 'flex justify-start' },
+                        h('div', { className: 'bg-gray-100 px-4 py-2 rounded-2xl' },
+                            h('div', { className: 'flex space-x-2' },
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce' }),
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '0.1s' } }),
+                                h('div', { className: 'w-2 h-2 bg-gray-400 rounded-full animate-bounce', style: { animationDelay: '0.2s' } })
+                            )
+                        )
+                    ),
+                    h('div', { ref: messagesEndRef })
+                ),
+                h('div', { className: 'border-t p-4' },
+                    h('div', { className: 'flex gap-2' },
+                        h('input', {
+                            type: 'text',
+                            value: input,
+                            onChange: e => setInput(e.target.value),
+                            onKeyPress: e => e.key === 'Enter' && sendMessage(),
+                            placeholder: 'Ask about your sales, customers, invoices...',
+                            className: 'flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                        }),
+                        h('button', {
+                            onClick: sendMessage,
+                            disabled: !input.trim() || loading,
+                            className: 'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 font-medium'
+                        }, '➤')
+                    )
+                )
+            );
+        };
+        
+        // Dashboard Component
+        const Dashboard = ({ invoices, customers, products }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            
+            useEffect(() => {
+                if (chartRef.current && invoices.length > 0) {
+                    const ctx = chartRef.current.getContext('2d');
+                    
+                    // Destroy existing chart
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                    
+                    // Group invoices by month
+                    const monthlyData = {};
+                    invoices.forEach(inv => {
+                        const month = inv.date.substring(0, 7);
+                        monthlyData[month] = (monthlyData[month] || 0) + parseFloat(inv.totals.gt);
+                    });
+                    
+                    const sortedMonths = Object.keys(monthlyData).sort().slice(-6);
+                    const values = sortedMonths.map(m => monthlyData[m]);
+                    
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: sortedMonths.map(m => {
+                                const [y, mo] = m.split('-');
+                                return new Date(y, mo - 1).toLocaleDateString('default', { month: 'short', year: 'numeric' });
+                            }),
+                            datasets: [{
+                                label: 'Revenue',
+                                data: values,
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '₹' + value.toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }, [invoices]);
+            
+            const totalRevenue = invoices.reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const paidRevenue = invoices.filter(i => i.payment_status === 'paid').reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const unpaidRevenue = invoices.filter(i => i.payment_status === 'unpaid').reduce((sum, inv) => sum + parseFloat(inv.totals.gt), 0);
+            const partialRevenue = invoices.filter(i => i.payment_status === 'partial').reduce((sum, inv) => sum + (parseFloat(inv.totals.gt) - parseFloat(inv.amount_paid || 0)), 0);
+            
+            const topCustomers = {};
+            invoices.forEach(inv => {
+                topCustomers[inv.customer.name] = (topCustomers[inv.customer.name] || 0) + parseFloat(inv.totals.gt);
+            });
+            const sortedCustomers = Object.entries(topCustomers).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            return h('div', { className: 'space-y-6' },
+                // Stats Cards
+                h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6' },
+                    [
+                        { title: 'Total Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: '💰', color: 'from-blue-500 to-blue-600' },
+                        { title: 'Paid', value: `₹${paidRevenue.toLocaleString()}`, icon: '✅', color: 'from-green-500 to-green-600' },
+                        { title: 'Pending', value: `₹${(unpaidRevenue + partialRevenue).toLocaleString()}`, icon: '⏳', color: 'from-yellow-500 to-yellow-600' },
+                        { title: 'Total Invoices', value: invoices.length, icon: '📄', color: 'from-purple-500 to-purple-600' }
+                    ].map((stat, idx) =>
+                        h('div', { key: idx, className: 'bg-white rounded-xl shadow-lg p-6 card-hover' },
+                            h('div', { className: 'flex items-center justify-between' },
+                                h('div', {},
+                                    h('p', { className: 'text-gray-500 text-sm font-medium' }, stat.title),
+                                    h('p', { className: 'text-3xl font-bold text-gray-800 mt-2' }, stat.value)
+                                ),
+                                h('div', { className: `text-4xl bg-gradient-to-r ${stat.color} w-16 h-16 rounded-xl flex items-center justify-center` }, stat.icon)
+                            )
+                        )
+                    )
+                ),
+                
+                // Revenue Chart
+                h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '📈 Revenue Trend'),
+                    h('div', { style: { height: '300px' } },
+                        h('canvas', { ref: chartRef })
+                    )
+                ),
+                
+                // Top Customers
+                h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '🌟 Top Customers'),
+                    h('div', { className: 'space-y-3' },
+                        sortedCustomers.length === 0 ? 
+                        h('p', { className: 'text-gray-500 text-center py-8' }, 'No customer data yet') :
+                        sortedCustomers.map(([name, amount], idx) =>
+                            h('div', { key: idx, className: 'flex items-center justify-between p-3 bg-gray-50 rounded-lg' },
+                                h('div', { className: 'flex items-center gap-3' },
+                                    h('div', { className: 'w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold' }, (idx + 1)),
+                                    h('span', { className: 'font-medium text-gray-800' }, name)
+                                ),
+                                h('span', { className: 'font-bold text-purple-600' }, `₹${amount.toLocaleString()}`)
+                            )
+                        )
                     )
                 )
             );
@@ -191,7 +430,7 @@
         
         // Main Billing App
         const BillingApp = ({ user, onLogout }) => {
-            const [view, setView] = useState('invoice');
+            const [view, setView] = useState('dashboard');
             const [loading, setLoading] = useState(true);
             const [invNum, setInvNum] = useState('INV-001');
             const [invDate, setInvDate] = useState(getCurrentDate());
@@ -201,6 +440,7 @@
             const [toDate, setToDate] = useState('');
             const [discount, setDiscount] = useState(0);
             const [searchQuery, setSearchQuery] = useState('');
+            const [showChatbot, setShowChatbot] = useState(false);
             
             const [custName, setCustName] = useState('');
             const [custAddr, setCustAddr] = useState('');
@@ -215,8 +455,8 @@
             const [showStockForm, setShowStockForm] = useState(false);
             const [stockFormData, setStockFormData] = useState({name:'',rate:0});
             const [editingStock, setEditingStock] = useState(null);
+            const [paymentModal, setPaymentModal] = useState(null);
             
-            // Load data on mount
             useEffect(() => {
                 loadAllData();
             }, []);
@@ -257,7 +497,6 @@
                         ifsc: data.ifsc || ''
                     });
                 } else {
-                    // Create default profile
                     setConfig({
                         name: 'Your Business Name',
                         address: 'Your Address',
@@ -300,7 +539,6 @@
                     .order('created_at', { ascending: false });
                 
                 if (data) {
-                    // Transform to match old format
                     const transformed = await Promise.all(data.map(async inv => {
                         const { data: items } = await supabase
                             .from('invoice_items')
@@ -339,6 +577,10 @@
                                 ti: inv.total_items,
                                 words: inv.amount_words
                             },
+                            payment_status: inv.payment_status || 'unpaid',
+                            amount_paid: inv.amount_paid || 0,
+                            payment_date: inv.payment_date,
+                            payment_notes: inv.payment_notes,
                             id: inv.id
                         };
                     }));
@@ -383,7 +625,6 @@
             const saveInvoice = async () => {
                 const tots = calcTotals();
                 
-                // Insert invoice
                 const { data: invData, error: invError } = await supabase
                     .from('invoices')
                     .insert({
@@ -404,7 +645,9 @@
                         grand_total: parseFloat(tots.gt),
                         total_quantity: tots.tq,
                         total_items: tots.ti,
-                        amount_words: tots.words
+                        amount_words: tots.words,
+                        payment_status: 'unpaid',
+                        amount_paid: 0
                     })
                     .select()
                     .single();
@@ -414,7 +657,6 @@
                     return;
                 }
                 
-                // Insert invoice items
                 const itemsToInsert = items.filter(i => i.name).map(it => {
                     const c = calcLine(it);
                     return {
@@ -436,7 +678,6 @@
                 
                 await supabase.from('invoice_items').insert(itemsToInsert);
                 
-                // Save customer if new
                 if (custName && !custs.find(c => c.name === custName)) {
                     await supabase.from('customers').insert({
                         user_id: user.id,
@@ -447,7 +688,6 @@
                     });
                 }
                 
-                // Save products if new
                 for (const it of items.filter(i => i.name)) {
                     if (!prods.find(p => p.name === it.name)) {
                         await supabase.from('product_rates').insert({
@@ -462,14 +702,26 @@
                 window.print();
             };
             
-            const deleteInvoice = async (inv) => {
-                if (!confirm('Delete invoice ' + inv.invoiceNumber + '?')) return;
-                
+            const updatePaymentStatus = async (invoice, status, amountPaid, notes) => {
                 const { error } = await supabase
                     .from('invoices')
-                    .delete()
-                    .eq('id', inv.id);
+                    .update({
+                        payment_status: status,
+                        amount_paid: parseFloat(amountPaid) || 0,
+                        payment_date: status === 'paid' ? getCurrentDate() : null,
+                        payment_notes: notes || null
+                    })
+                    .eq('id', invoice.id);
                 
+                if (!error) {
+                    await loadInvoices();
+                    setPaymentModal(null);
+                }
+            };
+            
+            const deleteInvoice = async (inv) => {
+                if (!confirm('Delete invoice ' + inv.invoiceNumber + '?')) return;
+                const { error } = await supabase.from('invoices').delete().eq('id', inv.id);
                 if (!error) await loadInvoices();
             };
             
@@ -503,185 +755,268 @@
                 );
             }
             
-            return h('div',{},
-                h('div',{className:'no-print min-h-screen'},
-                    h('div',{className:'bg-blue-600 text-white p-4 shadow-lg'},
-                        h('div',{className:'container mx-auto flex justify-between items-center'},
-                            h('h1',{className:'text-2xl font-bold'},'Smart GST Billing System'),
-                            h('div',{className:'flex items-center space-x-4'},
-                                h('span',{className:'text-sm'},user.email),
-                                h('button',{onClick:()=>setView('invoice'),className:`px-4 py-2 rounded ${view==='invoice'?'bg-white text-blue-600':'bg-blue-500'}`},'Invoice'),
-                                h('button',{onClick:()=>setView('stock'),className:`px-4 py-2 rounded ${view==='stock'?'bg-white text-blue-600':'bg-blue-500'}`},'Products'),
-                                h('button',{onClick:()=>setView('history'),className:`px-4 py-2 rounded ${view==='history'?'bg-white text-blue-600':'bg-blue-500'}`},'History'),
-                                h('button',{onClick:()=>setView('settings'),className:`px-4 py-2 rounded ${view==='settings'?'bg-white text-blue-600':'bg-blue-500'}`},'Settings'),
-                                h('button',{onClick:onLogout,className:'px-4 py-2 rounded bg-red-500 hover:bg-red-600'},'Logout')
-                            )
-                        )
-                    ),
-                    h('div',{className:'container mx-auto p-6'},
-                        view==='settings'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
-                            h('h2',{className:'text-2xl font-bold mb-6'},'Business Settings'),
-                            h('div',{className:'max-w-2xl space-y-4'},
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-3 py-2 border rounded',rows:3})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
-                                h('div',{className:'grid grid-cols-2 gap-4'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
-                                ),
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
-                                h('div',{className:'grid grid-cols-2 gap-4'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
-                                ),
-                                h('button',{onClick:saveProfile,className:'bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600'},'💾 Save Settings')
-                            )
-                        ):view==='invoice'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
-                            h('div',{className:'flex justify-between mb-4 pb-4 border-b'},
-                                h('div',{className:'flex space-x-4'},
-                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 text-white px-4 py-2 rounded'},'🆕 New'),
-                                    h('button',{onClick:saveInvoice,className:'bg-blue-500 text-white px-4 py-2 rounded'},'💾 Save & Print')
-                                ),
-                                h('div',{className:'flex items-center space-x-2'},
-                                    h('label',{className:'font-semibold'},'Tax Included?'),
-                                    h('button',{onClick:()=>setTaxInc(!taxInc),className:`relative inline-flex h-8 w-16 items-center rounded-full ${taxInc?'bg-green-500':'bg-gray-300'}`},h('span',{className:`inline-block h-6 w-6 rounded-full bg-white transform transition ${taxInc?'translate-x-9':'translate-x-1'}`})),
-                                    h('span',{className:'font-bold'},taxInc?'ON':'OFF')
-                                )
+            const NavButton = ({icon, label, viewName}) => 
+                h('button', {
+                    onClick: () => setView(viewName),
+                    className: `flex items-center gap-2 px-4 py-2 rounded-lg transition ${view === viewName ? 'gradient-bg text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`
+                }, icon, ' ', label);
+            
+            return h('div',{className:'no-print min-h-screen bg-gray-50'},
+                // Top Navigation
+                h('div',{className:'gradient-bg text-white shadow-xl'},
+                    h('div',{className:'container mx-auto px-6 py-4'},
+                        h('div',{className:'flex items-center justify-between'},
+                            h('div',{className:'flex items-center gap-3'},
+                                h('div',{className:'text-3xl'},'💼'),
+                                h('h1',{className:'text-2xl font-bold'},'Smart GST Billing')
                             ),
-                            h('div',{className:'grid grid-cols-2 gap-4 mb-4'},
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Invoice #'),h('input',{type:'text',value:invNum,onChange:e=>setInvNum(e.target.value),className:'w-full px-3 py-2 border rounded'})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Date'),h('input',{type:'date',value:invDate,onChange:e=>setInvDate(e.target.value),className:'w-full px-3 py-2 border rounded'}))
-                            ),
-                            h('div',{className:'mb-4 p-4 bg-gray-50 rounded'},
-                                h('h3',{className:'font-bold mb-2'},'Customer'),
-                                h('div',{className:'relative'},
-                                    h('input',{type:'text',placeholder:'Name',value:custName,onChange:e=>{setCustName(e.target.value);const c=custs.find(x=>x.name===e.target.value);if(c){setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')}},className:'w-full px-3 py-2 border rounded mb-2'}),
-                                    custName&&!custs.find(c=>c.name===custName)&&custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).length>0&&
-                                    h('div',{className:'absolute z-[9999] w-full bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto'},
-                                        custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).map((c,i)=>
-                                            h('div',{key:i,onClick:()=>{setCustName(c.name);setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')},className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},c.name)
-                                        )
-                                    )
-                                ),
-                                h('textarea',{placeholder:'Address',value:custAddr,onChange:e=>setCustAddr(e.target.value),className:'w-full px-3 py-2 border rounded mb-2',rows:2}),
-                                h('input',{type:'text',placeholder:'GSTIN',value:custGST,onChange:e=>setCustGST(e.target.value),className:'w-full px-3 py-2 border rounded mb-2'}),
-                                h('input',{type:'text',placeholder:'Phone',value:custPhone,onChange:e=>setCustPhone(e.target.value),className:'w-full px-3 py-2 border rounded'})
-                            ),
-                            h('div',{className:'mb-4'},
-                                h('h3',{className:'font-bold mb-2'},'Items'),
-                                h('table',{className:'w-full border-collapse'},
-                                    h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'#'),h('th',{className:'border p-2'},'Item'),h('th',{className:'border p-2'},'Qty'),h('th',{className:'border p-2'},'Unit'),h('th',{className:'border p-2'},'Free'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Disc%'),h('th',{className:'border p-2'},'Total'),h('th',{className:'border p-2'},'X'))),
-                                    h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id},
-                                        h('td',{className:'border p-2'},idx+1),
-                                        h('td',{className:'border p-2 relative'},
-                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-2 py-1 border rounded'}),
-                                            it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
-                                            h('div',{className:'absolute z-[9999] w-64 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto top-full left-0 mt-1'},
-                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},p.name+' - ₹'+p.rate)
-                                                )
-                                            )
-                                        ),
-                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.qty,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,qty:e.target.value}:i)),className:'w-20 px-2 py-1 border rounded'})),
-                                        h('td',{className:'border p-2'},h('select',{value:it.unit,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,unit:e.target.value}:i)),className:'w-full px-2 py-1 border rounded'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dozen'},'Dozen'),h('option',{value:'Gross'},'Gross'),h('option',{value:'Kg'},'Kg'),h('option',{value:'Ltr'},'Ltr'))),
-                                        h('td',{className:'border p-2'},
-                                            h('div',{className:'flex gap-1'},
-                                                h('input',{type:'number',value:it.freeQty||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeQty:e.target.value}:i)),className:'w-14 px-1 py-1 border rounded text-sm'}),
-                                                h('select',{value:it.freeUnit||'Pcs',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeUnit:e.target.value}:i)),className:'w-16 px-1 py-1 border rounded text-xs'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dnz'},'Dnz'),h('option',{value:'Grs'},'Grs'))
-                                            )
-                                        ),
-                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-24 px-2 py-1 border rounded',step:0.01})),
-                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-16 px-2 py-1 border rounded',step:0.01,min:0,max:100})),
-                                        h('td',{className:'border p-2 text-right font-semibold'},'₹'+c.tot),
-                                        h('td',{className:'border p-2 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 font-bold',disabled:items.length===1},'✕'))
-                                    )}))
-                                ),
-                                h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]),className:'mt-2 bg-blue-500 text-white px-4 py-2 rounded'},'➕ Add Item')
-                            ),
-                            h('div',{className:'grid grid-cols-2 gap-4'},
-                                h('div',{className:'p-4 bg-gray-50 rounded'},
-                                    h('h3',{className:'font-bold mb-2'},'Overall Discount %'),
-                                    h('input',{type:'number',value:discount,onChange:e=>setDiscount(e.target.value),className:'w-full px-3 py-2 border rounded',step:0.01,min:0,max:100,placeholder:'0'})
-                                ),
-                                h('div',{className:'p-4 bg-blue-50 rounded'},
-                                    h('h3',{className:'font-bold mb-2'},'Totals'),
-                                    h('p',{},'Subtotal: ₹'+tots.sub),
-                                    parseFloat(discount)>0&&h('p',{},'Discount ('+discount+'%): -₹'+tots.discAmt),
-                                    parseFloat(discount)>0&&h('p',{},'After Discount: ₹'+tots.afterDisc),
-                                    h('p',{},'CGST (2.5%): ₹'+tots.cg),
-                                    h('p',{},'SGST (2.5%): ₹'+tots.sg),
-                                    h('p',{className:'font-bold text-lg'},'Grand Total: ₹'+tots.gt),
-                                    h('p',{className:'text-sm text-gray-600'},'In Words: '+tots.words)
-                                )
-                            )
-                        ):view==='stock'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
-                            h('div',{className:'flex justify-between mb-4'},
-                                h('h2',{className:'text-2xl font-bold'},'Product Rates'),
-                                h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 text-white px-4 py-2 rounded'},'➕ Add Product')
-                            ),
-                            showStockForm&&h('div',{className:'mb-4 p-4 bg-gray-50 rounded border-2 border-blue-300'},
-                                h('h3',{className:'font-bold mb-3'},'Add New Product'),
-                                h('div',{className:'grid grid-cols-2 gap-3 mb-3'},
-                                    h('input',{type:'text',placeholder:'Product Name',value:stockFormData.name,onChange:e=>setStockFormData({...stockFormData,name:e.target.value}),className:'px-3 py-2 border rounded'}),
-                                    h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-3 py-2 border rounded',step:0.01})
-                                ),
-                                h('div',{className:'flex gap-2'},
-                                    h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0})}}},className:'bg-blue-500 text-white px-4 py-2 rounded'},'Save'),
-                                    h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 text-white px-4 py-2 rounded'},'Cancel')
-                                )
-                            ),
-                            stock.length===0?h('p',{className:'text-center py-8'},'No products added'):
-                            h('table',{className:'w-full border-collapse'},
-                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Product'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Action'))),
-                                h('tbody',{},stock.map((s,i)=>h('tr',{key:i},
-                                    h('td',{className:'border p-2'},
-                                        editingStock===i?
-                                        h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-2 py-1 border rounded'}):
-                                        s.name
-                                    ),
-                                    h('td',{className:'border p-2 text-right'},
-                                        editingStock===i?
-                                        h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-24 px-2 py-1 border rounded text-right',step:0.01}):
-                                        '₹'+(s.rate||0)
-                                    ),
-                                    h('td',{className:'border p-2 text-center'},
-                                        editingStock===i?
-                                        h('div',{className:'flex gap-1 justify-center'},
-                                            h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'bg-green-500 text-white px-2 py-1 rounded text-sm'},'✓'),
-                                            h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'bg-gray-500 text-white px-2 py-1 rounded text-sm'},'✕')
-                                        ):
-                                        h('div',{className:'flex gap-1 justify-center'},
-                                            h('button',{onClick:()=>setEditingStock(i),className:'bg-blue-500 text-white px-2 py-1 rounded text-sm'},'Edit'),
-                                            h('button',{onClick:async()=>{if(confirm('Delete '+s.name+'?')){await supabase.from('product_rates').delete().eq('id',s.id);await loadProducts()}},className:'bg-red-500 text-white px-2 py-1 rounded text-sm'},'✕')
-                                        )
-                                    )
-                                )))
-                            )
-                        ):h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
-                            h('div',{className:'mb-4'},
-                                h('h2',{className:'text-2xl font-bold mb-4'},'History'),
-                                h('div',{className:'mb-4'},
-                                    h('input',{type:'text',placeholder:'Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-4 py-2 border rounded-lg'})
-                                ),
-                                h('div',{className:'flex items-center gap-4 mb-4'},
-                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-3 py-2 border rounded'})),
-                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-3 py-2 border rounded'})),
-                                    h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 text-white px-4 py-2 rounded mt-6'},'Clear')
-                                )
-                            ),
-                            invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-8'},'No invoices found'):
-                            h('table',{className:'w-full border-collapse'},
-                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Invoice #'),h('th',{className:'border p-2'},'Date'),h('th',{className:'border p-2'},'Customer'),h('th',{className:'border p-2'},'Amount'),h('th',{className:'border p-2'},'Action'))),
-                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i},h('td',{className:'border p-2'},inv.invoiceNumber),h('td',{className:'border p-2'},inv.date),h('td',{className:'border p-2'},inv.customer.name),h('td',{className:'border p-2 text-right'},'₹'+inv.totals.gt),h('td',{className:'border p-2 text-center'},
-                                    h('div',{className:'flex gap-1 justify-center'},
-                                        h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 text-white px-3 py-1 rounded text-sm'},'🖨 Reprint'),
-                                        h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 text-white px-3 py-1 rounded text-sm'},'🗑')
-                                    )
-                                ))))
+                            h('div',{className:'flex items-center gap-4'},
+                                h('span',{className:'text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full'}, user.email),
+                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition'},'🤖 AI Assistant'),
+                                h('button',{onClick:onLogout,className:'bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition'},'Logout')
                             )
                         )
                     )
                 ),
+                
+                // Side Navigation
+                h('div',{className:'container mx-auto px-6 py-6'},
+                    h('div',{className:'flex gap-4 mb-6 overflow-x-auto pb-2'},
+                        h(NavButton, {icon:'📊', label:'Dashboard', viewName:'dashboard'}),
+                        h(NavButton, {icon:'📝', label:'Invoice', viewName:'invoice'}),
+                        h(NavButton, {icon:'📦', label:'Products', viewName:'stock'}),
+                        h(NavButton, {icon:'📜', label:'History', viewName:'history'}),
+                        h(NavButton, {icon:'⚙️', label:'Settings', viewName:'settings'})
+                    ),
+                    
+                    // Main Content
+                    view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
+                    view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'Business Settings'),
+                        h('div',{className:'max-w-3xl space-y-6'},
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:3})),
+                            h('div',{className:'grid grid-cols-2 gap-6'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                            ),
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                            h('div',{className:'grid grid-cols-2 gap-6'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                            ),
+                            h('button',{onClick:saveProfile,className:'gradient-bg text-white px-8 py-3 rounded-lg hover:opacity-90 transition font-semibold text-lg'},'💾 Save Settings')
+                        )
+                    ):view==='invoice'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('div',{className:'flex justify-between mb-6 pb-6 border-b-2'},
+                            h('div',{className:'flex gap-4'},
+                                h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
+                                h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save & Print')
+                            ),
+                            h('div',{className:'flex items-center gap-3'},
+                                h('label',{className:'font-semibold text-gray-700'},'Tax Included?'),
+                                h('button',{onClick:()=>setTaxInc(!taxInc),className:`relative inline-flex h-10 w-20 items-center rounded-full transition ${taxInc?'bg-green-500':'bg-gray-300'}`},h('span',{className:`inline-block h-8 w-8 rounded-full bg-white transform transition ${taxInc?'translate-x-11':'translate-x-1'}`})),
+                                h('span',{className:'font-bold'},taxInc?'ON':'OFF')
+                            )
+                        ),
+                        h('div',{className:'grid grid-cols-2 gap-6 mb-6'},
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Invoice #'),h('input',{type:'text',value:invNum,onChange:e=>setInvNum(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                            h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Date'),h('input',{type:'date',value:invDate,onChange:e=>setInvDate(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                        ),
+                        h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
+                            h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Customer Details'),
+                            h('div',{className:'relative mb-3'},
+                                h('input',{type:'text',placeholder:'Customer Name',value:custName,onChange:e=>{setCustName(e.target.value);const c=custs.find(x=>x.name===e.target.value);if(c){setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')}},className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                custName&&!custs.find(c=>c.name===custName)&&custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).length>0&&
+                                h('div',{className:'absolute z-[9999] w-full bg-white border-2 border-purple-200 rounded-lg shadow-xl max-h-48 overflow-y-auto mt-1'},
+                                    custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).map((c,i)=>
+                                        h('div',{key:i,onClick:()=>{setCustName(c.name);setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')},className:'px-4 py-3 hover:bg-purple-50 cursor-pointer border-b transition'},c.name)
+                                    )
+                                )
+                            ),
+                            h('textarea',{placeholder:'Address',value:custAddr,onChange:e=>setCustAddr(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg mb-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:2}),
+                            h('div',{className:'grid grid-cols-2 gap-3'},
+                                h('input',{type:'text',placeholder:'GSTIN',value:custGST,onChange:e=>setCustGST(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                h('input',{type:'text',placeholder:'Phone',value:custPhone,onChange:e=>setCustPhone(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})
+                            )
+                        ),
+                        h('div',{className:'mb-6'},
+                            h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Invoice Items'),
+                            h('div',{className:'overflow-x-auto'},
+                                h('table',{className:'w-full border-collapse'},
+                                    h('thead',{},h('tr',{className:'gradient-bg text-white'},h('th',{className:'border border-gray-300 p-3 text-left'},'#'),h('th',{className:'border border-gray-300 p-3 text-left'},'Item'),h('th',{className:'border border-gray-300 p-3 text-left'},'Qty'),h('th',{className:'border border-gray-300 p-3 text-left'},'Unit'),h('th',{className:'border border-gray-300 p-3 text-left'},'Free'),h('th',{className:'border border-gray-300 p-3 text-left'},'Rate'),h('th',{className:'border border-gray-300 p-3 text-left'},'Disc%'),h('th',{className:'border border-gray-300 p-3 text-right'},'Total'),h('th',{className:'border border-gray-300 p-3 text-center'},'X'))),
+                                    h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id,className:'hover:bg-purple-50 transition'},
+                                        h('td',{className:'border border-gray-300 p-3 font-semibold'},idx+1),
+                                        h('td',{className:'border border-gray-300 p-3 relative'},
+                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                            it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
+                                            h('div',{className:'absolute z-[9999] w-80 bg-white border-2 border-purple-200 rounded-lg shadow-xl max-h-48 overflow-y-auto top-full left-0 mt-1'},
+                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-50 cursor-pointer border-b transition'},p.name+' - ₹'+p.rate)
+                                                )
+                                            )
+                                        ),
+                                        h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.qty,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,qty:e.target.value}:i)),className:'w-24 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                        h('td',{className:'border border-gray-300 p-3'},h('select',{value:it.unit,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,unit:e.target.value}:i)),className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dozen'},'Dozen'),h('option',{value:'Gross'},'Gross'),h('option',{value:'Kg'},'Kg'),h('option',{value:'Ltr'},'Ltr'))),
+                                        h('td',{className:'border border-gray-300 p-3'},
+                                            h('div',{className:'flex gap-1'},
+                                                h('input',{type:'number',value:it.freeQty||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeQty:e.target.value}:i)),className:'w-16 px-2 py-2 border-2 border-gray-200 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                                h('select',{value:it.freeUnit||'Pcs',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeUnit:e.target.value}:i)),className:'w-20 px-2 py-2 border-2 border-gray-200 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dnz'},'Dnz'),h('option',{value:'Grs'},'Grs'))
+                                            )
+                                        ),
+                                        h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-28 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01})),
+                                        h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-20 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,min:0,max:100})),
+                                        h('td',{className:'border border-gray-300 p-3 text-right font-bold text-purple-600'},'₹'+c.tot),
+                                        h('td',{className:'border border-gray-300 p-3 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 hover:text-red-700 font-bold text-xl transition',disabled:items.length===1},'✕'))
+                                    )}))
+                                )
+                            ),
+                            h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]),className:'mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Item')
+                        ),
+                        h('div',{className:'grid grid-cols-2 gap-6'},
+                            h('div',{className:'p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl'},
+                                h('h3',{className:'font-bold mb-3 text-lg text-gray-800'},'Overall Discount %'),
+                                h('input',{type:'number',value:discount,onChange:e=>setDiscount(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-xl',step:0.01,min:0,max:100,placeholder:'0'})
+                            ),
+                            h('div',{className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
+                                h('h3',{className:'font-bold mb-3 text-lg text-gray-800'},'Totals'),
+                                h('p',{className:'text-gray-700 mb-1'},'Subtotal: ',h('span',{className:'font-bold'},'₹'+tots.sub)),
+                                parseFloat(discount)>0&&h('p',{className:'text-gray-700 mb-1'},'Discount (',discount,'%): ',h('span',{className:'font-bold text-red-600'},'-₹'+tots.discAmt)),
+                                parseFloat(discount)>0&&h('p',{className:'text-gray-700 mb-1'},'After Discount: ',h('span',{className:'font-bold'},'₹'+tots.afterDisc)),
+                                h('p',{className:'text-gray-700 mb-1'},'CGST (2.5%): ',h('span',{className:'font-bold'},'₹'+tots.cg)),
+                                h('p',{className:'text-gray-700 mb-1'},'SGST (2.5%): ',h('span',{className:'font-bold'},'₹'+tots.sg)),
+                                h('p',{className:'text-2xl font-bold text-purple-600 mt-2'},'₹'+tots.gt),
+                                h('p',{className:'text-xs text-gray-600 mt-2'},tots.words)
+                            )
+                        )
+                    ):view==='stock'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('div',{className:'flex justify-between mb-6'},
+                            h('h2',{className:'text-3xl font-bold gradient-text'},'Product Rates'),
+                            h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Product')
+                        ),
+                        showStockForm&&h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200'},
+                            h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Add New Product'),
+                            h('div',{className:'grid grid-cols-2 gap-4 mb-4'},
+                                h('input',{type:'text',placeholder:'Product Name',value:stockFormData.name,onChange:e=>setStockFormData({...stockFormData,name:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01})
+                            ),
+                            h('div',{className:'flex gap-3'},
+                                h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0})}}},className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Save'),
+                                h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
+                            )
+                        ),
+                        stock.length===0?h('p',{className:'text-center py-16 text-gray-500 text-lg'},'No products added yet'):
+                        h('div',{className:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'},
+                            stock.map((s,i)=>h('div',{key:i,className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl card-hover border-2 border-gray-100'},
+                                editingStock===i?
+                                h('div',{className:'space-y-3'},
+                                    h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                    h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg text-right focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),
+                                    h('div',{className:'flex gap-2'},
+                                        h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✓'),
+                                        h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✕')
+                                    )
+                                ):
+                                h('div',{},
+                                    h('h3',{className:'text-xl font-bold text-gray-800 mb-2'},s.name),
+                                    h('p',{className:'text-3xl font-bold text-purple-600 mb-4'},'₹'+(s.rate||0)),
+                                    h('div',{className:'flex gap-2'},
+                                        h('button',{onClick:()=>setEditingStock(i),className:'flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Edit'),
+                                        h('button',{onClick:async()=>{if(confirm('Delete '+s.name+'?')){await supabase.from('product_rates').delete().eq('id',s.id);await loadProducts()}},className:'flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Delete')
+                                    )
+                                )
+                            ))
+                        )
+                    ):h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                        h('div',{className:'mb-6'},
+                            h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'Invoice History'),
+                            h('div',{className:'mb-4'},
+                                h('input',{type:'text',placeholder:'🔍 Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-6 py-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg'})
+                            ),
+                            h('div',{className:'flex items-center gap-4 mb-4'},
+                                h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
+                                h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg mt-6 transition font-semibold'},'Clear')
+                            )
+                        ),
+                        invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-16 text-gray-500 text-lg'},'No invoices found'):
+                        h('div',{className:'overflow-x-auto'},
+                            h('table',{className:'w-full border-collapse'},
+                                h('thead',{},h('tr',{className:'gradient-bg text-white'},h('th',{className:'border border-gray-300 p-4 text-left'},'Invoice #'),h('th',{className:'border border-gray-300 p-4 text-left'},'Date'),h('th',{className:'border border-gray-300 p-4 text-left'},'Customer'),h('th',{className:'border border-gray-300 p-4 text-right'},'Amount'),h('th',{className:'border border-gray-300 p-4 text-center'},'Status'),h('th',{className:'border border-gray-300 p-4 text-center'},'Actions'))),
+                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i,className:'hover:bg-purple-50 transition'},
+                                    h('td',{className:'border border-gray-300 p-4 font-bold text-purple-600'},inv.invoiceNumber),
+                                    h('td',{className:'border border-gray-300 p-4'},inv.date),
+                                    h('td',{className:'border border-gray-300 p-4'},inv.customer.name),
+                                    h('td',{className:'border border-gray-300 p-4 text-right font-bold'},'₹'+inv.totals.gt),
+                                    h('td',{className:'border border-gray-300 p-4 text-center'},
+                                        h('span',{className:`status-badge status-${inv.payment_status}`},
+                                            inv.payment_status === 'paid' ? '✅ Paid' :
+                                            inv.payment_status === 'partial' ? '⏳ Partial' : '⚠️ Unpaid'
+                                        ),
+                                        inv.payment_status === 'partial' && 
+                                        h('div',{className:'text-xs mt-1 text-gray-600'},'Paid: ₹'+inv.amount_paid+' / Pending: ₹'+(parseFloat(inv.totals.gt) - parseFloat(inv.amount_paid)).toFixed(2))
+                                    ),
+                                    h('td',{className:'border border-gray-300 p-4'},
+                                        h('div',{className:'flex gap-2 justify-center flex-wrap'},
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
+                                            h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
+                                        )
+                                    )
+                                )))
+                            )
+                        )
+                    )
+                ),
+                
+                // Payment Modal
+                paymentModal && h('div',{className:'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'},
+                    h('div',{className:'bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full'},
+                        h('h3',{className:'text-2xl font-bold mb-4 gradient-text'},'Payment for '+paymentModal.invoiceNumber),
+                        h('p',{className:'mb-2'},'Customer: ',h('span',{className:'font-bold'},paymentModal.customer.name)),
+                        h('p',{className:'mb-2'},'Total Amount: ',h('span',{className:'font-bold text-purple-600'},'₹'+paymentModal.totals.gt)),
+                        h('p',{className:'mb-6'},'Already Paid: ',h('span',{className:'font-bold text-green-600'},'₹'+(paymentModal.amount_paid||0))),
+                        h('div',{className:'space-y-4'},
+                            h('div',{},
+                                h('label',{className:'block font-semibold mb-2 text-gray-700'},'Payment Status'),
+                                h('select',{id:'payment-status',className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},
+                                    h('option',{value:'paid'},'✅ Paid'),
+                                    h('option',{value:'partial'},'⏳ Partially Paid'),
+                                    h('option',{value:'unpaid'},'⚠️ Unpaid')
+                                )
+                            ),
+                            h('div',{},
+                                h('label',{className:'block font-semibold mb-2 text-gray-700'},'Amount Paid'),
+                                h('input',{type:'number',id:'amount-paid',defaultValue:paymentModal.amount_paid||0,step:0.01,className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})
+                            ),
+                            h('div',{},
+                                h('label',{className:'block font-semibold mb-2 text-gray-700'},'Payment Notes (optional)'),
+                                h('input',{type:'text',id:'payment-notes',placeholder:'e.g., Transaction ID, Payment method',className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})
+                            ),
+                            h('div',{className:'flex gap-3 mt-6'},
+                                h('button',{onClick:()=>{
+                                    const status=document.getElementById('payment-status').value;
+                                    const amount=document.getElementById('amount-paid').value;
+                                    const notes=document.getElementById('payment-notes').value;
+                                    updatePaymentStatus(paymentModal,status,amount,notes);
+                                },className:'flex-1 gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Save'),
+                                h('button',{onClick:()=>setPaymentModal(null),className:'flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
+                            )
+                        )
+                    )
+                ),
+                
+                // AI Chatbot Sidebar
+                showChatbot && h('div',{className:'fixed right-0 top-0 w-96 h-screen bg-white shadow-2xl z-40 flex flex-col'},
+                    h('div',{className:'gradient-bg text-white p-4 flex items-center justify-between'},
+                        h('h3',{className:'text-xl font-bold'},'🤖 AI Assistant'),
+                        h('button',{onClick:()=>setShowChatbot(false),className:'text-white hover:text-gray-200 text-2xl'},'✕')
+                    ),
+                    h(AIChatbot, {invoices:invs, customers:custs, products:prods, user})
+                ),
+                
+                // Print Container
                 h('div',{className:'print-container'},
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
@@ -713,13 +1048,11 @@
             const [loading, setLoading] = useState(true);
             
             useEffect(() => {
-                // Check for existing session
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     setUser(session?.user ?? null);
                     setLoading(false);
                 });
                 
-                // Listen for auth changes
                 const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
                     setUser(session?.user ?? null);
                 });
@@ -734,8 +1067,11 @@
             };
             
             if (loading) {
-                return h('div', { className: 'min-h-screen flex items-center justify-center' },
-                    h('div', { className: 'loader' })
+                return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg' },
+                    h('div', { className: 'text-center' },
+                        h('div', { className: 'loader mx-auto mb-4' }),
+                        h('p', { className: 'text-white text-lg' }, 'Loading...')
+                    )
                 );
             }
             
@@ -746,7 +1082,6 @@
             return h(BillingApp, { user, onLogout: handleLogout });
         };
         
-        // Render
         render(h(App), document.getElementById('root'));
         
     })();

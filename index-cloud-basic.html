@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart GST Billing System - Cloud</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 20px; }
+            .print-container { width: 100%; max-width: 210mm; margin: 0 auto; }
+            .invoice-table { border-collapse: collapse; width: 100%; }
+            .invoice-table th, .invoice-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            .print-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-footer { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
+        }
+        @media screen { .print-container { display: none; } }
+        .autocomplete-list {
+            position: absolute; z-index: 9999; background: white; border: 1px solid #ccc;
+            max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; }
+        .autocomplete-item:hover { background-color: #f0f0f0; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <script>
+    (function() {
+        'use strict';
+        
+        const { useState, useEffect, useRef, createElement: h } = React;
+        const { render } = ReactDOM;
+        
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://yylahhomjnijsybazxpt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bGFoaG9tam5panN5YmF6eHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTIzMDgsImV4cCI6MjA4NTYyODMwOH0.hkQmKxKSZivIzcEG4_3fVT5wrPbgSy9dL1Y2w44Gb5w';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Helper functions
+        const numberToWords = (num) => {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            
+            if (num === 0) return 'Zero';
+            
+            const convert = (n) => {
+                if (n < 10) return ones[n];
+                if (n < 20) return teens[n - 10];
+                if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+                if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert(n % 100) : '');
+                if (n < 100000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
+                if (n < 10000000) return convert(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + convert(n % 100000) : '');
+                return convert(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + convert(n % 10000000) : '');
+            };
+            
+            const rupees = Math.floor(num);
+            const paise = Math.round((num - rupees) * 100);
+            let result = convert(rupees) + ' Rupees';
+            if (paise > 0) result += ' and ' + convert(paise) + ' Paise';
+            return result + ' Only';
+        };
+        
+        const getCurrentDate = () => new Date().toISOString().split('T')[0];
+        
+        // Auth Component
+        const AuthPage = ({ onAuthSuccess }) => {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [rememberMe, setRememberMe] = useState(true);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                
+                try {
+                    if (isLogin) {
+                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                        if (error) throw error;
+                        if (rememberMe) {
+                            localStorage.setItem('rememberMe', 'true');
+                        }
+                        onAuthSuccess(data.user);
+                    } else {
+                        const { data, error } = await supabase.auth.signUp({ email, password });
+                        if (error) throw error;
+                        if (data.user && data.user.identities && data.user.identities.length === 0) {
+                            setError('User already exists. Please login.');
+                        } else {
+                            alert('Check your email for verification link!');
+                            setIsLogin(true);
+                        }
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const handleGoogleAuth = async () => {
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.origin }
+                });
+                if (error) setError(error.message);
+            };
+            
+            return h('div', { className: 'min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600' },
+                h('div', { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-md' },
+                    h('div', { className: 'text-center mb-8' },
+                        h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Smart GST Billing'),
+                        h('p', { className: 'text-gray-600' }, isLogin ? 'Sign in to your account' : 'Create a new account')
+                    ),
+                    error && h('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4' }, error),
+                    h('form', { onSubmit: handleAuth, className: 'space-y-4' },
+                        h('div', {},
+                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
+                            h('input', {
+                                type: 'email',
+                                value: email,
+                                onChange: e => setEmail(e.target.value),
+                                required: true,
+                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                                placeholder: 'your@email.com'
+                            })
+                        ),
+                        h('div', {},
+                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Password'),
+                            h('input', {
+                                type: 'password',
+                                value: password,
+                                onChange: e => setPassword(e.target.value),
+                                required: true,
+                                minLength: 6,
+                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                                placeholder: '••••••••'
+                            })
+                        ),
+                        isLogin && h('div', { className: 'flex items-center' },
+                            h('input', {
+                                type: 'checkbox',
+                                id: 'remember',
+                                checked: rememberMe,
+                                onChange: e => setRememberMe(e.target.checked),
+                                className: 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                            }),
+                            h('label', { htmlFor: 'remember', className: 'ml-2 block text-sm text-gray-700' }, 'Remember me')
+                        ),
+                        h('button', {
+                            type: 'submit',
+                            disabled: loading,
+                            className: 'w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                        }, loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')),
+                        h('div', { className: 'relative my-4' },
+                            h('div', { className: 'absolute inset-0 flex items-center' },
+                                h('div', { className: 'w-full border-t border-gray-300' })
+                            ),
+                            h('div', { className: 'relative flex justify-center text-sm' },
+                                h('span', { className: 'px-2 bg-white text-gray-500' }, 'Or continue with')
+                            )
+                        ),
+                        h('button', {
+                            type: 'button',
+                            onClick: handleGoogleAuth,
+                            className: 'w-full bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2'
+                        }, '🔍 Google')
+                    ),
+                    h('div', { className: 'text-center mt-6' },
+                        h('button', {
+                            type: 'button',
+                            onClick: () => { setIsLogin(!isLogin); setError(''); },
+                            className: 'text-blue-600 hover:text-blue-700 text-sm font-medium'
+                        }, isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In")
+                    )
+                )
+            );
+        };
+        
+        // Main Billing App
+        const BillingApp = ({ user, onLogout }) => {
+            const [view, setView] = useState('invoice');
+            const [loading, setLoading] = useState(true);
+            const [invNum, setInvNum] = useState('INV-001');
+            const [invDate, setInvDate] = useState(getCurrentDate());
+            const [taxInc, setTaxInc] = useState(false);
+            const [config, setConfig] = useState(null);
+            const [fromDate, setFromDate] = useState('');
+            const [toDate, setToDate] = useState('');
+            const [discount, setDiscount] = useState(0);
+            const [searchQuery, setSearchQuery] = useState('');
+            
+            const [custName, setCustName] = useState('');
+            const [custAddr, setCustAddr] = useState('');
+            const [custGST, setCustGST] = useState('');
+            const [custPhone, setCustPhone] = useState('');
+            
+            const [items, setItems] = useState([{id:1,name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);
+            const [custs, setCusts] = useState([]);
+            const [prods, setProds] = useState([]);
+            const [invs, setInvs] = useState([]);
+            const [stock, setStock] = useState([]);
+            const [showStockForm, setShowStockForm] = useState(false);
+            const [stockFormData, setStockFormData] = useState({name:'',rate:0});
+            const [editingStock, setEditingStock] = useState(null);
+            
+            // Load data on mount
+            useEffect(() => {
+                loadAllData();
+            }, []);
+            
+            const loadAllData = async () => {
+                setLoading(true);
+                try {
+                    await Promise.all([
+                        loadProfile(),
+                        loadCustomers(),
+                        loadProducts(),
+                        loadInvoices()
+                    ]);
+                    await generateNextInvoiceNumber();
+                } catch (err) {
+                    console.error('Error loading data:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const loadProfile = async () => {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (data) {
+                    setConfig({
+                        name: data.business_name || 'Your Business Name',
+                        address: data.business_address || 'Your Address',
+                        gstin: data.gstin || '',
+                        phone: data.phone || '',
+                        email: data.email || user.email,
+                        bankName: data.bank_name || '',
+                        accountNo: data.account_no || '',
+                        ifsc: data.ifsc || ''
+                    });
+                } else {
+                    // Create default profile
+                    setConfig({
+                        name: 'Your Business Name',
+                        address: 'Your Address',
+                        gstin: '',
+                        phone: '',
+                        email: user.email,
+                        bankName: '',
+                        accountNo: '',
+                        ifsc: ''
+                    });
+                }
+            };
+            
+            const loadCustomers = async () => {
+                const { data } = await supabase
+                    .from('customers')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('name');
+                if (data) setCusts(data);
+            };
+            
+            const loadProducts = async () => {
+                const { data } = await supabase
+                    .from('product_rates')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('name');
+                if (data) {
+                    setStock(data);
+                    setProds(data);
+                }
+            };
+            
+            const loadInvoices = async () => {
+                const { data } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false });
+                
+                if (data) {
+                    // Transform to match old format
+                    const transformed = await Promise.all(data.map(async inv => {
+                        const { data: items } = await supabase
+                            .from('invoice_items')
+                            .select('*')
+                            .eq('invoice_id', inv.id);
+                        
+                        return {
+                            invoiceNumber: inv.invoice_number,
+                            date: inv.date,
+                            customer: {
+                                name: inv.customer_name,
+                                address: inv.customer_address,
+                                gstin: inv.customer_gstin,
+                                phone: inv.customer_phone
+                            },
+                            items: items.map(it => ({
+                                name: it.item_name,
+                                hsn: it.hsn,
+                                qty: it.quantity,
+                                unit: it.unit,
+                                rate: it.rate,
+                                freeQty: it.free_qty,
+                                freeUnit: it.free_unit,
+                                discount: it.discount
+                            })),
+                            taxInclusive: inv.tax_inclusive,
+                            discount: inv.discount,
+                            totals: {
+                                sub: inv.subtotal,
+                                discAmt: inv.discount_amount,
+                                afterDisc: inv.after_discount,
+                                cg: inv.cgst,
+                                sg: inv.sgst,
+                                gt: inv.grand_total,
+                                tq: inv.total_quantity,
+                                ti: inv.total_items,
+                                words: inv.amount_words
+                            },
+                            id: inv.id
+                        };
+                    }));
+                    setInvs(transformed);
+                }
+            };
+            
+            const generateNextInvoiceNumber = async () => {
+                const { data } = await supabase
+                    .from('invoices')
+                    .select('invoice_number')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                if (data && data.length > 0) {
+                    const lastNum = parseInt(data[0].invoice_number.split('-')[1]);
+                    setInvNum(`INV-${String(lastNum + 1).padStart(3, '0')}`);
+                } else {
+                    setInvNum('INV-001');
+                }
+            };
+            
+            const saveProfile = async () => {
+                const { error } = await supabase
+                    .from('user_profiles')
+                    .upsert({
+                        id: user.id,
+                        business_name: config.name,
+                        business_address: config.address,
+                        gstin: config.gstin,
+                        phone: config.phone,
+                        email: config.email,
+                        bank_name: config.bankName,
+                        account_no: config.accountNo,
+                        ifsc: config.ifsc
+                    });
+                
+                if (!error) alert('Settings saved!');
+            };
+            
+            const saveInvoice = async () => {
+                const tots = calcTotals();
+                
+                // Insert invoice
+                const { data: invData, error: invError } = await supabase
+                    .from('invoices')
+                    .insert({
+                        user_id: user.id,
+                        invoice_number: invNum,
+                        date: invDate,
+                        customer_name: custName,
+                        customer_address: custAddr,
+                        customer_gstin: custGST,
+                        customer_phone: custPhone,
+                        tax_inclusive: taxInc,
+                        discount: parseFloat(discount) || 0,
+                        subtotal: parseFloat(tots.sub),
+                        discount_amount: parseFloat(tots.discAmt),
+                        after_discount: parseFloat(tots.afterDisc),
+                        cgst: parseFloat(tots.cg),
+                        sgst: parseFloat(tots.sg),
+                        grand_total: parseFloat(tots.gt),
+                        total_quantity: tots.tq,
+                        total_items: tots.ti,
+                        amount_words: tots.words
+                    })
+                    .select()
+                    .single();
+                
+                if (invError) {
+                    alert('Error saving invoice: ' + invError.message);
+                    return;
+                }
+                
+                // Insert invoice items
+                const itemsToInsert = items.filter(i => i.name).map(it => {
+                    const c = calcLine(it);
+                    return {
+                        invoice_id: invData.id,
+                        item_name: it.name,
+                        hsn: it.hsn,
+                        quantity: parseFloat(it.qty),
+                        unit: it.unit,
+                        rate: parseFloat(it.rate),
+                        free_qty: parseFloat(it.freeQty) || 0,
+                        free_unit: it.freeUnit,
+                        discount: parseFloat(it.discount) || 0,
+                        base_amount: parseFloat(c.base),
+                        cgst: parseFloat(c.cgst),
+                        sgst: parseFloat(c.sgst),
+                        total: parseFloat(c.tot)
+                    };
+                });
+                
+                await supabase.from('invoice_items').insert(itemsToInsert);
+                
+                // Save customer if new
+                if (custName && !custs.find(c => c.name === custName)) {
+                    await supabase.from('customers').insert({
+                        user_id: user.id,
+                        name: custName,
+                        address: custAddr,
+                        gstin: custGST,
+                        phone: custPhone
+                    });
+                }
+                
+                // Save products if new
+                for (const it of items.filter(i => i.name)) {
+                    if (!prods.find(p => p.name === it.name)) {
+                        await supabase.from('product_rates').insert({
+                            user_id: user.id,
+                            name: it.name,
+                            rate: parseFloat(it.rate) || 0
+                        });
+                    }
+                }
+                
+                await loadAllData();
+                window.print();
+            };
+            
+            const deleteInvoice = async (inv) => {
+                if (!confirm('Delete invoice ' + inv.invoiceNumber + '?')) return;
+                
+                const { error } = await supabase
+                    .from('invoices')
+                    .delete()
+                    .eq('id', inv.id);
+                
+                if (!error) await loadInvoices();
+            };
+            
+            const calcLine = (item) => {
+                const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
+                let finalRate = r - (r * d / 100);
+                if(taxInc) {
+                    const base = finalRate/1.05, gst = finalRate-base;
+                    return {base:(base*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:(finalRate*q).toFixed(2),unitBase:base.toFixed(2)};
+                }
+                const gst = finalRate*0.05;
+                return {base:(finalRate*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:((finalRate+gst)*q).toFixed(2),unitBase:finalRate.toFixed(2)};
+            };
+            
+            const calcTotals = () => {
+                let sub=0,cg=0,sg=0,tq=0,ti=items.filter(i=>i.name).length;
+                items.forEach(i=>{if(i.name){const c=calcLine(i);sub+=parseFloat(c.base);cg+=parseFloat(c.cgst);sg+=parseFloat(c.sgst);tq+=parseFloat(i.qty)||0;}});
+                const discAmt = (sub * (parseFloat(discount)||0) / 100);
+                const afterDisc = sub - discAmt;
+                const cgstFinal = (afterDisc * 0.025);
+                const sgstFinal = (afterDisc * 0.025);
+                const gt = afterDisc + cgstFinal + sgstFinal;
+                return {sub:sub.toFixed(2),discAmt:discAmt.toFixed(2),afterDisc:afterDisc.toFixed(2),cg:cgstFinal.toFixed(2),sg:sgstFinal.toFixed(2),gt:gt.toFixed(2),tq,ti,words:numberToWords(gt)};
+            };
+            
+            const tots = calcTotals();
+            
+            if (loading || !config) {
+                return h('div', { className: 'min-h-screen flex items-center justify-center' },
+                    h('div', { className: 'loader' })
+                );
+            }
+            
+            return h('div',{},
+                h('div',{className:'no-print min-h-screen'},
+                    h('div',{className:'bg-blue-600 text-white p-4 shadow-lg'},
+                        h('div',{className:'container mx-auto flex justify-between items-center'},
+                            h('h1',{className:'text-2xl font-bold'},'Smart GST Billing System'),
+                            h('div',{className:'flex items-center space-x-4'},
+                                h('span',{className:'text-sm'},user.email),
+                                h('button',{onClick:()=>setView('invoice'),className:`px-4 py-2 rounded ${view==='invoice'?'bg-white text-blue-600':'bg-blue-500'}`},'Invoice'),
+                                h('button',{onClick:()=>setView('stock'),className:`px-4 py-2 rounded ${view==='stock'?'bg-white text-blue-600':'bg-blue-500'}`},'Products'),
+                                h('button',{onClick:()=>setView('history'),className:`px-4 py-2 rounded ${view==='history'?'bg-white text-blue-600':'bg-blue-500'}`},'History'),
+                                h('button',{onClick:()=>setView('settings'),className:`px-4 py-2 rounded ${view==='settings'?'bg-white text-blue-600':'bg-blue-500'}`},'Settings'),
+                                h('button',{onClick:onLogout,className:'px-4 py-2 rounded bg-red-500 hover:bg-red-600'},'Logout')
+                            )
+                        )
+                    ),
+                    h('div',{className:'container mx-auto p-6'},
+                        view==='settings'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('h2',{className:'text-2xl font-bold mb-6'},'Business Settings'),
+                            h('div',{className:'max-w-2xl space-y-4'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-3 py-2 border rounded',rows:3})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{className:'grid grid-cols-2 gap-4'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
+                                ),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{className:'grid grid-cols-2 gap-4'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
+                                ),
+                                h('button',{onClick:saveProfile,className:'bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600'},'💾 Save Settings')
+                            )
+                        ):view==='invoice'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'flex justify-between mb-4 pb-4 border-b'},
+                                h('div',{className:'flex space-x-4'},
+                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 text-white px-4 py-2 rounded'},'🆕 New'),
+                                    h('button',{onClick:saveInvoice,className:'bg-blue-500 text-white px-4 py-2 rounded'},'💾 Save & Print')
+                                ),
+                                h('div',{className:'flex items-center space-x-2'},
+                                    h('label',{className:'font-semibold'},'Tax Included?'),
+                                    h('button',{onClick:()=>setTaxInc(!taxInc),className:`relative inline-flex h-8 w-16 items-center rounded-full ${taxInc?'bg-green-500':'bg-gray-300'}`},h('span',{className:`inline-block h-6 w-6 rounded-full bg-white transform transition ${taxInc?'translate-x-9':'translate-x-1'}`})),
+                                    h('span',{className:'font-bold'},taxInc?'ON':'OFF')
+                                )
+                            ),
+                            h('div',{className:'grid grid-cols-2 gap-4 mb-4'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Invoice #'),h('input',{type:'text',value:invNum,onChange:e=>setInvNum(e.target.value),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Date'),h('input',{type:'date',value:invDate,onChange:e=>setInvDate(e.target.value),className:'w-full px-3 py-2 border rounded'}))
+                            ),
+                            h('div',{className:'mb-4 p-4 bg-gray-50 rounded'},
+                                h('h3',{className:'font-bold mb-2'},'Customer'),
+                                h('div',{className:'relative'},
+                                    h('input',{type:'text',placeholder:'Name',value:custName,onChange:e=>{setCustName(e.target.value);const c=custs.find(x=>x.name===e.target.value);if(c){setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')}},className:'w-full px-3 py-2 border rounded mb-2'}),
+                                    custName&&!custs.find(c=>c.name===custName)&&custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).length>0&&
+                                    h('div',{className:'absolute z-[9999] w-full bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto'},
+                                        custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).map((c,i)=>
+                                            h('div',{key:i,onClick:()=>{setCustName(c.name);setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')},className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},c.name)
+                                        )
+                                    )
+                                ),
+                                h('textarea',{placeholder:'Address',value:custAddr,onChange:e=>setCustAddr(e.target.value),className:'w-full px-3 py-2 border rounded mb-2',rows:2}),
+                                h('input',{type:'text',placeholder:'GSTIN',value:custGST,onChange:e=>setCustGST(e.target.value),className:'w-full px-3 py-2 border rounded mb-2'}),
+                                h('input',{type:'text',placeholder:'Phone',value:custPhone,onChange:e=>setCustPhone(e.target.value),className:'w-full px-3 py-2 border rounded'})
+                            ),
+                            h('div',{className:'mb-4'},
+                                h('h3',{className:'font-bold mb-2'},'Items'),
+                                h('table',{className:'w-full border-collapse'},
+                                    h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'#'),h('th',{className:'border p-2'},'Item'),h('th',{className:'border p-2'},'Qty'),h('th',{className:'border p-2'},'Unit'),h('th',{className:'border p-2'},'Free'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Disc%'),h('th',{className:'border p-2'},'Total'),h('th',{className:'border p-2'},'X'))),
+                                    h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id},
+                                        h('td',{className:'border p-2'},idx+1),
+                                        h('td',{className:'border p-2 relative'},
+                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-2 py-1 border rounded'}),
+                                            it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
+                                            h('div',{className:'absolute z-[9999] w-64 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto top-full left-0 mt-1'},
+                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},p.name+' - ₹'+p.rate)
+                                                )
+                                            )
+                                        ),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.qty,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,qty:e.target.value}:i)),className:'w-20 px-2 py-1 border rounded'})),
+                                        h('td',{className:'border p-2'},h('select',{value:it.unit,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,unit:e.target.value}:i)),className:'w-full px-2 py-1 border rounded'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dozen'},'Dozen'),h('option',{value:'Gross'},'Gross'),h('option',{value:'Kg'},'Kg'),h('option',{value:'Ltr'},'Ltr'))),
+                                        h('td',{className:'border p-2'},
+                                            h('div',{className:'flex gap-1'},
+                                                h('input',{type:'number',value:it.freeQty||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeQty:e.target.value}:i)),className:'w-14 px-1 py-1 border rounded text-sm'}),
+                                                h('select',{value:it.freeUnit||'Pcs',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeUnit:e.target.value}:i)),className:'w-16 px-1 py-1 border rounded text-xs'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dnz'},'Dnz'),h('option',{value:'Grs'},'Grs'))
+                                            )
+                                        ),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-24 px-2 py-1 border rounded',step:0.01})),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-16 px-2 py-1 border rounded',step:0.01,min:0,max:100})),
+                                        h('td',{className:'border p-2 text-right font-semibold'},'₹'+c.tot),
+                                        h('td',{className:'border p-2 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 font-bold',disabled:items.length===1},'✕'))
+                                    )}))
+                                ),
+                                h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]),className:'mt-2 bg-blue-500 text-white px-4 py-2 rounded'},'➕ Add Item')
+                            ),
+                            h('div',{className:'grid grid-cols-2 gap-4'},
+                                h('div',{className:'p-4 bg-gray-50 rounded'},
+                                    h('h3',{className:'font-bold mb-2'},'Overall Discount %'),
+                                    h('input',{type:'number',value:discount,onChange:e=>setDiscount(e.target.value),className:'w-full px-3 py-2 border rounded',step:0.01,min:0,max:100,placeholder:'0'})
+                                ),
+                                h('div',{className:'p-4 bg-blue-50 rounded'},
+                                    h('h3',{className:'font-bold mb-2'},'Totals'),
+                                    h('p',{},'Subtotal: ₹'+tots.sub),
+                                    parseFloat(discount)>0&&h('p',{},'Discount ('+discount+'%): -₹'+tots.discAmt),
+                                    parseFloat(discount)>0&&h('p',{},'After Discount: ₹'+tots.afterDisc),
+                                    h('p',{},'CGST (2.5%): ₹'+tots.cg),
+                                    h('p',{},'SGST (2.5%): ₹'+tots.sg),
+                                    h('p',{className:'font-bold text-lg'},'Grand Total: ₹'+tots.gt),
+                                    h('p',{className:'text-sm text-gray-600'},'In Words: '+tots.words)
+                                )
+                            )
+                        ):view==='stock'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'flex justify-between mb-4'},
+                                h('h2',{className:'text-2xl font-bold'},'Product Rates'),
+                                h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 text-white px-4 py-2 rounded'},'➕ Add Product')
+                            ),
+                            showStockForm&&h('div',{className:'mb-4 p-4 bg-gray-50 rounded border-2 border-blue-300'},
+                                h('h3',{className:'font-bold mb-3'},'Add New Product'),
+                                h('div',{className:'grid grid-cols-2 gap-3 mb-3'},
+                                    h('input',{type:'text',placeholder:'Product Name',value:stockFormData.name,onChange:e=>setStockFormData({...stockFormData,name:e.target.value}),className:'px-3 py-2 border rounded'}),
+                                    h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-3 py-2 border rounded',step:0.01})
+                                ),
+                                h('div',{className:'flex gap-2'},
+                                    h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0})}}},className:'bg-blue-500 text-white px-4 py-2 rounded'},'Save'),
+                                    h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 text-white px-4 py-2 rounded'},'Cancel')
+                                )
+                            ),
+                            stock.length===0?h('p',{className:'text-center py-8'},'No products added'):
+                            h('table',{className:'w-full border-collapse'},
+                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Product'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Action'))),
+                                h('tbody',{},stock.map((s,i)=>h('tr',{key:i},
+                                    h('td',{className:'border p-2'},
+                                        editingStock===i?
+                                        h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-2 py-1 border rounded'}):
+                                        s.name
+                                    ),
+                                    h('td',{className:'border p-2 text-right'},
+                                        editingStock===i?
+                                        h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-24 px-2 py-1 border rounded text-right',step:0.01}):
+                                        '₹'+(s.rate||0)
+                                    ),
+                                    h('td',{className:'border p-2 text-center'},
+                                        editingStock===i?
+                                        h('div',{className:'flex gap-1 justify-center'},
+                                            h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'bg-green-500 text-white px-2 py-1 rounded text-sm'},'✓'),
+                                            h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'bg-gray-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                        ):
+                                        h('div',{className:'flex gap-1 justify-center'},
+                                            h('button',{onClick:()=>setEditingStock(i),className:'bg-blue-500 text-white px-2 py-1 rounded text-sm'},'Edit'),
+                                            h('button',{onClick:async()=>{if(confirm('Delete '+s.name+'?')){await supabase.from('product_rates').delete().eq('id',s.id);await loadProducts()}},className:'bg-red-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                        )
+                                    )
+                                )))
+                            )
+                        ):h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'mb-4'},
+                                h('h2',{className:'text-2xl font-bold mb-4'},'History'),
+                                h('div',{className:'mb-4'},
+                                    h('input',{type:'text',placeholder:'Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-4 py-2 border rounded-lg'})
+                                ),
+                                h('div',{className:'flex items-center gap-4 mb-4'},
+                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-3 py-2 border rounded'})),
+                                    h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 text-white px-4 py-2 rounded mt-6'},'Clear')
+                                )
+                            ),
+                            invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-8'},'No invoices found'):
+                            h('table',{className:'w-full border-collapse'},
+                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Invoice #'),h('th',{className:'border p-2'},'Date'),h('th',{className:'border p-2'},'Customer'),h('th',{className:'border p-2'},'Amount'),h('th',{className:'border p-2'},'Action'))),
+                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i},h('td',{className:'border p-2'},inv.invoiceNumber),h('td',{className:'border p-2'},inv.date),h('td',{className:'border p-2'},inv.customer.name),h('td',{className:'border p-2 text-right'},'₹'+inv.totals.gt),h('td',{className:'border p-2 text-center'},
+                                    h('div',{className:'flex gap-1 justify-center'},
+                                        h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 text-white px-3 py-1 rounded text-sm'},'🖨 Reprint'),
+                                        h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 text-white px-3 py-1 rounded text-sm'},'🗑')
+                                    )
+                                ))))
+                            )
+                        )
+                    )
+                ),
+                h('div',{className:'print-container'},
+                    h('div',{className:'print-header'},
+                        h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
+                            h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config.name),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config.address),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+config.gstin),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+config.phone),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+config.email)),
+                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'20px',fontWeight:'bold',margin:'0 0 10px 0'}},'TAX INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Date: '),invDate))
+                        ),
+                        h('div',{style:{marginBottom:'20px',padding:'10px',border:'1px solid #000'}},h('h3',{style:{fontSize:'14px',fontWeight:'bold',margin:'0 0 5px 0'}},'Bill To:'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},custName)),h('p',{style:{margin:'2px 0',fontSize:'12px'}},custAddr),custPhone&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+custPhone),custGST&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+custGST))
+                    ),
+                    h('table',{className:'invoice-table'},
+                        h('thead',{},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'25%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),h('th',{style:{width:'7%'}},'Qty'),h('th',{style:{width:'7%'}},'Unit'),h('th',{style:{width:'10%'}},'Free'),h('th',{style:{width:'11%',textAlign:'right'}},'Rate'),h('th',{style:{width:'12%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
+                        h('tbody',{},
+                            items.filter(i=>i.name).map((it,idx)=>{const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+(taxInc?c.unitBase:it.rate)),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
+                            parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'Discount ('+discount+'%):'),h('td',{colSpan:2,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
+                            parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.cg)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.sg)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'₹'+tots.gt))
+                        )
+                    ),
+                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'12px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'12px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'Bank: '+config.bankName),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'A/C: '+config.accountNo),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'IFSC: '+config.ifsc)),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'12px',margin:'2px 0'}},'For '+config.name),h('div',{style:{height:'60px'}}),h('p',{style:{fontSize:'12px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'10px',marginTop:'20px',fontStyle:'italic'}},'Thank you for your business!'))
+                )
+            );
+        };
+        
+        // Main App with Auth
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                // Check for existing session
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    setUser(session?.user ?? null);
+                    setLoading(false);
+                });
+                
+                // Listen for auth changes
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                    setUser(session?.user ?? null);
+                });
+                
+                return () => subscription.unsubscribe();
+            }, []);
+            
+            const handleLogout = async () => {
+                await supabase.auth.signOut();
+                localStorage.removeItem('rememberMe');
+                setUser(null);
+            };
+            
+            if (loading) {
+                return h('div', { className: 'min-h-screen flex items-center justify-center' },
+                    h('div', { className: 'loader' })
+                );
+            }
+            
+            if (!user) {
+                return h(AuthPage, { onAuthSuccess: setUser });
+            }
+            
+            return h(BillingApp, { user, onLogout: handleLogout });
+        };
+        
+        // Render
+        render(h(App), document.getElementById('root'));
+        
+    })();
+    </script>
+</body>
+</html>
