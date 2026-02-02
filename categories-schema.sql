@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS public.categories (
 -- Add RLS policies for categories
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own categories" ON public.categories;
+DROP POLICY IF EXISTS "Users can insert their own categories" ON public.categories;
+DROP POLICY IF EXISTS "Users can update their own categories" ON public.categories;
+DROP POLICY IF EXISTS "Users can delete their own categories" ON public.categories;
+
 CREATE POLICY "Users can view their own categories"
     ON public.categories FOR SELECT
     USING (auth.uid() = user_id);
@@ -39,8 +44,10 @@ ADD COLUMN IF NOT EXISTS category_id BIGINT REFERENCES public.categories(id) ON 
 CREATE INDEX IF NOT EXISTS idx_invoices_category_id ON public.invoices(category_id);
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 
--- Insert default categories for existing users
+-- Insert default categories for existing users (only if they don't have any)
 INSERT INTO public.categories (user_id, name, description, default_hsn, has_mrp)
 SELECT DISTINCT user_id, 'General Bills', 'Standard billing category', '33074100', false
 FROM public.user_profiles
-ON CONFLICT DO NOTHING;
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.categories WHERE categories.user_id = user_profiles.user_id
+);
