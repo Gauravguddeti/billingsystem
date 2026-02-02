@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart GST Billing System</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 20px; }
+            .print-container { width: 100%; max-width: 210mm; margin: 0 auto; }
+            .invoice-table { border-collapse: collapse; width: 100%; }
+            .invoice-table th, .invoice-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            .print-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-footer { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
+        }
+        @media screen { .print-container { display: none; } }
+        .autocomplete-list {
+            position: absolute; z-index: 9999; background: white; border: 1px solid #ccc;
+            max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; }
+        .autocomplete-item:hover { background-color: #f0f0f0; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <script>
+    (function() {
+        'use strict';
+        
+        const { useState, useEffect, useRef, createElement: h } = React;
+        const { render } = ReactDOM;
+        
+        // Business Configuration
+        const getBusinessConfig = () => {
+            const stored = localStorage.getItem('businessConfig');
+            if (stored) return JSON.parse(stored);
+            return {
+                name: "ABC Trading Company",
+                address: "123 Market Street, Business District, Mumbai - 400001",
+                gstin: "27AABCU9603R1ZM",
+                phone: "+91 98765 43210",
+                email: "info@abctrading.com",
+                bankName: "HDFC Bank",
+                accountNo: "50200012345678",
+                ifsc: "HDFC0001234"
+            };
+        };
+        
+        const getNextInvoiceNumber = () => {
+            const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+            if (invoices.length === 0) return 'INV-001';
+            const lastInvoice = invoices[invoices.length - 1];
+            const lastNum = parseInt(lastInvoice.invoiceNumber.split('-')[1]);
+            return `INV-${String(lastNum + 1).padStart(3, '0')}`;
+        };
+        
+        const numberToWords = (num) => {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            
+            if (num === 0) return 'Zero';
+            
+            const convert = (n) => {
+                if (n < 10) return ones[n];
+                if (n < 20) return teens[n - 10];
+                if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+                if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert(n % 100) : '');
+                if (n < 100000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
+                if (n < 10000000) return convert(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + convert(n % 100000) : '');
+                return convert(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + convert(n % 10000000) : '');
+            };
+            
+            const rupees = Math.floor(num);
+            const paise = Math.round((num - rupees) * 100);
+            let result = convert(rupees) + ' Rupees';
+            if (paise > 0) result += ' and ' + convert(paise) + ' Paise';
+            return result + ' Only';
+        };
+        
+        const getCurrentDate = () => {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        };
+        
+        // AutoComplete Component
+        const AutoComplete = ({ value, onChange, suggestions, placeholder, onSelect }) => {
+            const [showSuggestions, setShowSuggestions] = useState(false);
+            const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+            const wrapperRef = useRef(null);
+            
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setShowSuggestions(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+            
+            useEffect(() => {
+                if (value && value.length > 0) {
+                    const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()));
+                    setFilteredSuggestions(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                } else {
+                    setShowSuggestions(false);
+                }
+            }, [value, suggestions]);
+            
+            return h('div', { ref: wrapperRef, className: 'relative' },
+                h('input', {
+                    type: 'text',
+                    value: value,
+                    onChange: (e) => onChange(e.target.value),
+                    placeholder: placeholder,
+                    className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                }),
+                showSuggestions && h('div', { className: 'autocomplete-list' },
+                    filteredSuggestions.map((suggestion, index) =>
+                        h('div', {
+                            key: index,
+                            className: 'autocomplete-item',
+                            onClick: () => { onSelect(suggestion); setShowSuggestions(false); }
+                        }, suggestion)
+                    )
+                )
+            );
+        };
+        
+        // Main Billing App - FULL VERSION
+        const BillingApp = () => {
+            const [view, setView] = useState('invoice');
+            const [invNum, setInvNum] = useState('INV-001');
+            const [invDate, setInvDate] = useState(getCurrentDate());
+            const [taxInc, setTaxInc] = useState(false);
+            const [config, setConfig] = useState(getBusinessConfig());
+            const [fromDate, setFromDate] = useState('');
+            const [toDate, setToDate] = useState('');
+            const [discount, setDiscount] = useState(0);
+            
+            const [custName, setCustName] = useState('');
+            const [custAddr, setCustAddr] = useState('');
+            const [custGST, setCustGST] = useState('');
+            const [custPhone, setCustPhone] = useState('');
+            
+            const [items, setItems] = useState([{id:1,name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);
+            const [custs, setCusts] = useState([]);
+            const [prods, setProds] = useState([]);
+            const [invs, setInvs] = useState([]);
+            const [stock, setStock] = useState([]);
+            const [showStockForm, setShowStockForm] = useState(false);
+            const [stockFormData, setStockFormData] = useState({name:'',rate:0});
+            const [editingStock, setEditingStock] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            
+            useEffect(() => {
+                setCusts(JSON.parse(localStorage.getItem('customers')||'[]'));
+                setProds(JSON.parse(localStorage.getItem('products')||'[]'));
+                const loadedInvs = JSON.parse(localStorage.getItem('invoices')||'[]');
+                setInvs(loadedInvs);
+                setStock(JSON.parse(localStorage.getItem('stock')||'[]'));
+                setInvNum(getNextInvoiceNumber());
+            }, []);
+            
+            const calcLine = (item) => {
+                const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
+                let finalRate = r - (r * d / 100);
+                if(taxInc) {
+                    const base = finalRate/1.05, gst = finalRate-base;
+                    return {base:(base*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:(finalRate*q).toFixed(2),unitBase:base.toFixed(2)};
+                }
+                const gst = finalRate*0.05;
+                return {base:(finalRate*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:((finalRate+gst)*q).toFixed(2),unitBase:finalRate.toFixed(2)};
+            };
+            
+            const calcTotals = () => {
+                let sub=0,cg=0,sg=0,tq=0,ti=items.filter(i=>i.name).length;
+                items.forEach(i=>{if(i.name){const c=calcLine(i);sub+=parseFloat(c.base);cg+=parseFloat(c.cgst);sg+=parseFloat(c.sgst);tq+=parseFloat(i.qty)||0;}});
+                const discAmt = (sub * (parseFloat(discount)||0) / 100);
+                const afterDisc = sub - discAmt;
+                const cgstFinal = (afterDisc * 0.025);
+                const sgstFinal = (afterDisc * 0.025);
+                const gt = afterDisc + cgstFinal + sgstFinal;
+                return {sub:sub.toFixed(2),discAmt:discAmt.toFixed(2),afterDisc:afterDisc.toFixed(2),cg:cgstFinal.toFixed(2),sg:sgstFinal.toFixed(2),gt:gt.toFixed(2),tq,ti,words:numberToWords(gt)};
+            };
+            
+            const tots = calcTotals();
+            
+            return h('div',{},
+                h('div',{className:'no-print min-h-screen'},
+                    h('div',{className:'bg-blue-600 text-white p-4 shadow-lg'},
+                        h('div',{className:'container mx-auto flex justify-between items-center'},
+                            h('h1',{className:'text-2xl font-bold'},'Smart GST Billing System'),
+                            h('div',{className:'flex space-x-2'},
+                                h('button',{onClick:()=>setView('invoice'),className:`px-4 py-2 rounded ${view==='invoice'?'bg-white text-blue-600':'bg-blue-500'}`},'Invoice'),
+                                h('button',{onClick:()=>setView('stock'),className:`px-4 py-2 rounded ${view==='stock'?'bg-white text-blue-600':'bg-blue-500'}`},'Products'),
+                                h('button',{onClick:()=>setView('history'),className:`px-4 py-2 rounded ${view==='history'?'bg-white text-blue-600':'bg-blue-500'}`},'History'),
+                                h('button',{onClick:()=>setView('settings'),className:`px-4 py-2 rounded ${view==='settings'?'bg-white text-blue-600':'bg-blue-500'}`},'Settings')
+                            )
+                        )
+                    ),
+                    h('div',{className:'container mx-auto p-6'},
+                        view==='settings'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('h2',{className:'text-2xl font-bold mb-6'},'Business Settings'),
+                            h('div',{className:'max-w-2xl space-y-4'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-3 py-2 border rounded',rows:3})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{className:'grid grid-cols-2 gap-4'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
+                                ),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{className:'grid grid-cols-2 gap-4'},
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
+                                ),
+                                h('button',{onClick:()=>{localStorage.setItem('businessConfig',JSON.stringify(config));alert('Saved!')},className:'bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600'},'💾 Save Settings')
+                            )
+                        ):view==='invoice'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'flex justify-between mb-4 pb-4 border-b'},
+                                h('div',{className:'flex space-x-4'},
+                                    h('button',{onClick:()=>{setInvNum(getNextInvoiceNumber());setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 text-white px-4 py-2 rounded'},'🆕 New'),
+                                    h('button',{onClick:()=>{
+                                        if(custName&&!custs.find(c=>c.name===custName)){const nc=[...custs,{name:custName,address:custAddr,gstin:custGST,phone:custPhone}];setCusts(nc);localStorage.setItem('customers',JSON.stringify(nc));}
+                                        items.forEach(i=>{if(i.name&&!prods.find(p=>p.name===i.name)){const np=[...prods,{name:i.name,rate:i.rate,unit:i.unit}];setProds(np);localStorage.setItem('products',JSON.stringify(np));}});
+                                        let updatedStock=[...stock];
+                                        items.filter(i=>i.name).forEach(i=>{const stk=updatedStock.find(s=>s.name===i.name);if(!stk){updatedStock.push({name:i.name,rate:parseFloat(i.rate)||0})}});
+                                        setStock(updatedStock);localStorage.setItem('stock',JSON.stringify(updatedStock));
+                                        const inv={invoiceNumber:invNum,date:invDate,customer:{name:custName,address:custAddr,gstin:custGST,phone:custPhone},items:items.filter(i=>i.name),taxInclusive:taxInc,discount:discount,totals:tots,timestamp:new Date().toISOString()};
+                                        const ni=[...invs,inv];setInvs(ni);localStorage.setItem('invoices',JSON.stringify(ni));window.print();
+                                    },className:'bg-blue-500 text-white px-4 py-2 rounded'},'💾 Save & Print')
+                                ),
+                                h('div',{className:'flex items-center space-x-2'},
+                                    h('label',{className:'font-semibold'},'Tax Included?'),
+                                    h('button',{onClick:()=>setTaxInc(!taxInc),className:`relative inline-flex h-8 w-16 items-center rounded-full ${taxInc?'bg-green-500':'bg-gray-300'}`},h('span',{className:`inline-block h-6 w-6 rounded-full bg-white transform transition ${taxInc?'translate-x-9':'translate-x-1'}`})),
+                                    h('span',{className:'font-bold'},taxInc?'ON':'OFF')
+                                )
+                            ),
+                            h('div',{className:'grid grid-cols-2 gap-4 mb-4'},
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Invoice #'),h('input',{type:'text',value:invNum,onChange:e=>setInvNum(e.target.value),className:'w-full px-3 py-2 border rounded'})),
+                                h('div',{},h('label',{className:'block font-semibold mb-2'},'Date'),h('input',{type:'date',value:invDate,onChange:e=>setInvDate(e.target.value),className:'w-full px-3 py-2 border rounded'}))
+                            ),
+                            h('div',{className:'mb-4 p-4 bg-gray-50 rounded'},
+                                h('h3',{className:'font-bold mb-2'},'Customer'),
+                                h('div',{className:'relative'},
+                                    h('input',{type:'text',placeholder:'Name',value:custName,onChange:e=>{setCustName(e.target.value);const c=custs.find(x=>x.name===e.target.value);if(c){setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')}},className:'w-full px-3 py-2 border rounded mb-2'}),
+                                    custName&&!custs.find(c=>c.name===custName)&&custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).length>0&&
+                                    h('div',{className:'absolute z-[9999] w-full bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto'},
+                                        custs.filter(c=>c.name.toLowerCase().includes(custName.toLowerCase())).map((c,i)=>
+                                            h('div',{key:i,onClick:()=>{setCustName(c.name);setCustAddr(c.address);setCustGST(c.gstin);setCustPhone(c.phone||'')},className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},c.name)
+                                        )
+                                    )
+                                ),
+                                h('textarea',{placeholder:'Address',value:custAddr,onChange:e=>setCustAddr(e.target.value),className:'w-full px-3 py-2 border rounded mb-2',rows:2}),
+                                h('input',{type:'text',placeholder:'GSTIN',value:custGST,onChange:e=>setCustGST(e.target.value),className:'w-full px-3 py-2 border rounded mb-2'}),
+                                h('input',{type:'text',placeholder:'Phone',value:custPhone,onChange:e=>setCustPhone(e.target.value),className:'w-full px-3 py-2 border rounded'})
+                            ),
+                            h('div',{className:'mb-4'},
+                                h('h3',{className:'font-bold mb-2'},'Items'),
+                                h('table',{className:'w-full border-collapse'},
+                                    h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'#'),h('th',{className:'border p-2'},'Item'),h('th',{className:'border p-2'},'Qty'),h('th',{className:'border p-2'},'Unit'),h('th',{className:'border p-2'},'Free'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Disc%'),h('th',{className:'border p-2'},'Total'),h('th',{className:'border p-2'},'X'))),
+                                    h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id},
+                                        h('td',{className:'border p-2'},idx+1),
+                                        h('td',{className:'border p-2 relative'},
+                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate,unit:p.unit}:i))}},className:'w-full px-2 py-1 border rounded'}),
+                                            it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
+                                            h('div',{className:'absolute z-[9999] w-64 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto top-full left-0 mt-1'},
+                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,unit:p.unit}:im)),className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},p.name+' - ₹'+p.rate)
+                                                )
+                                            )
+                                        ),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.qty,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,qty:e.target.value}:i)),className:'w-20 px-2 py-1 border rounded'})),
+                                        h('td',{className:'border p-2'},h('select',{value:it.unit,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,unit:e.target.value}:i)),className:'w-full px-2 py-1 border rounded'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dozen'},'Dozen'),h('option',{value:'Gross'},'Gross'),h('option',{value:'Kg'},'Kg'),h('option',{value:'Ltr'},'Ltr'))),
+                                        h('td',{className:'border p-2'},
+                                            h('div',{className:'flex gap-1'},
+                                                h('input',{type:'number',value:it.freeQty||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeQty:e.target.value}:i)),className:'w-14 px-1 py-1 border rounded text-sm'}),
+                                                h('select',{value:it.freeUnit||'Pcs',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,freeUnit:e.target.value}:i)),className:'w-16 px-1 py-1 border rounded text-xs'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dnz'},'Dnz'),h('option',{value:'Grs'},'Grs'))
+                                            )
+                                        ),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-24 px-2 py-1 border rounded',step:0.01})),
+                                        h('td',{className:'border p-2'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-16 px-2 py-1 border rounded',step:0.01,min:0,max:100})),
+                                        h('td',{className:'border p-2 text-right font-semibold'},'₹'+c.tot),
+                                        h('td',{className:'border p-2 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 font-bold',disabled:items.length===1},'✕'))
+                                    )}))
+                                ),
+                                h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]),className:'mt-2 bg-blue-500 text-white px-4 py-2 rounded'},'➕ Add Item')
+                            ),
+                            h('div',{className:'grid grid-cols-2 gap-4'},
+                                h('div',{className:'p-4 bg-gray-50 rounded'},h('h3',{className:'font-bold mb-2'},'Summary'),h('p',{},'Items: '+tots.ti),h('p',{},'Quantity: '+tots.tq)),
+                                h('div',{className:'p-4 bg-blue-50 rounded'},
+                                    h('h3',{className:'font-bold mb-2'},'Totals'),
+                                    h('p',{},'Subtotal: ₹'+tots.sub),
+                                    parseFloat(discount)>0&&h('p',{},'Discount ('+discount+'%): -₹'+tots.discAmt),
+                                    parseFloat(discount)>0&&h('p',{},'After Discount: ₹'+tots.afterDisc),
+                                    h('p',{},'CGST (2.5%): ₹'+tots.cg),
+                                    h('p',{},'SGST (2.5%): ₹'+tots.sg),
+                                    h('p',{className:'font-bold text-lg'},'Grand Total: ₹'+tots.gt),
+                                    h('p',{className:'text-sm text-gray-600'},'In Words: '+tots.words)
+                                )
+                            )
+                        ):view==='stock'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'flex justify-between mb-4'},
+                                h('h2',{className:'text-2xl font-bold'},'Product Rates'),
+                                h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 text-white px-4 py-2 rounded'},'➕ Add Product')
+                            ),
+                            showStockForm&&h('div',{className:'mb-4 p-4 bg-gray-50 rounded border-2 border-blue-300'},
+                                h('h3',{className:'font-bold mb-3'},'Add New Product'),
+                                h('div',{className:'grid grid-cols-2 gap-3 mb-3'},
+                                    h('input',{type:'text',placeholder:'Product Name',value:stockFormData.name,onChange:e=>setStockFormData({...stockFormData,name:e.target.value}),className:'px-3 py-2 border rounded'}),
+                                    h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-3 py-2 border rounded',step:0.01})
+                                ),
+                                h('div',{className:'flex gap-2'},
+                                    h('button',{onClick:()=>{if(stockFormData.name){const existing=stock.find(s=>s.name===stockFormData.name);if(existing){const ns=stock.map(s=>s.name===stockFormData.name?{...s,rate:parseFloat(stockFormData.rate)||0}:s);setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}else{const ns=[...stock,{name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0}];setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}setShowStockForm(false);setStockFormData({name:'',rate:0})}},className:'bg-blue-500 text-white px-4 py-2 rounded'},'Save'),
+                                    h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 text-white px-4 py-2 rounded'},'Cancel')
+                                )
+                            ),
+                            stock.length===0?h('p',{className:'text-center py-8'},'No products added'):
+                            h('table',{className:'w-full border-collapse'},
+                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Product'),h('th',{className:'border p-2'},'Rate'),h('th',{className:'border p-2'},'Action'))),
+                                h('tbody',{},stock.map((s,i)=>h('tr',{key:i},
+                                    h('td',{className:'border p-2'},
+                                        editingStock===i?
+                                        h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-2 py-1 border rounded'}):
+                                        s.name
+                                    ),
+                                    h('td',{className:'border p-2 text-right'},
+                                        editingStock===i?
+                                        h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-24 px-2 py-1 border rounded text-right',step:0.01}):
+                                        '₹'+(s.rate||0)
+                                    ),
+                                    h('td',{className:'border p-2 text-center'},
+                                        editingStock===i?
+                                        h('div',{className:'flex gap-1 justify-center'},
+                                            h('button',{onClick:()=>{localStorage.setItem('stock',JSON.stringify(stock));setEditingStock(null)},className:'bg-green-500 text-white px-2 py-1 rounded text-sm'},'✓'),
+                                            h('button',{onClick:()=>{setStock(JSON.parse(localStorage.getItem('stock')||'[]'));setEditingStock(null)},className:'bg-gray-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                        ):
+                                        h('div',{className:'flex gap-1 justify-center'},
+                                            h('button',{onClick:()=>setEditingStock(i),className:'bg-blue-500 text-white px-2 py-1 rounded text-sm'},'Edit'),
+                                            h('button',{onClick:()=>{if(confirm('Delete '+s.name+'?')){const ns=stock.filter(st=>st.name!==s.name);setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}},className:'bg-red-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                        )
+                                    )
+                                )))
+                            )
+                        ):h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
+                            h('div',{className:'mb-4'},
+                                h('h2',{className:'text-2xl font-bold mb-4'},'History'),
+                                h('div',{className:'mb-4'},
+                                    h('input',{type:'text',placeholder:'Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-4 py-2 border rounded-lg'})
+                                ),
+                                h('div',{className:'flex items-center gap-4 mb-4'},
+                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-3 py-2 border rounded'})),
+                                    h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-3 py-2 border rounded'})),
+                                    h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 text-white px-4 py-2 rounded mt-6'},'Clear'),
+                                    h('button',{onClick:()=>{
+                                        const filtered=invs.filter(inv=>{const d=inv.date;return(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);});
+                                        if(!filtered.length)return alert('No invoices in date range!');
+                                        const printWin=window.open('','_blank');
+                                        let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>All Invoices</title><style>@page{size:A4;margin:15mm;}body{font-family:Arial,sans-serif;margin:0;padding:20px;}.invoice{page-break-after:always;margin-bottom:40px;}.invoice:last-child{page-break-after:auto;}.header{display:flex;justify-content:space-between;margin-bottom:20px;}.header h1{font-size:24px;margin:0 0 10px 0;}.header h2{font-size:20px;margin:0 0 10px 0;}.header p{margin:2px 0;font-size:12px;}.bill-to{margin-bottom:20px;padding:10px;border:1px solid #000;}.bill-to h3{font-size:14px;margin:0 0 5px 0;}.bill-to p{margin:2px 0;font-size:12px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}table th,table td{border:1px solid #000;padding:8px;font-size:12px;}table th{background:#f0f0f0;font-weight:bold;}table td{text-align:left;}table td.right{text-align:right;}.footer{margin-top:20px;}.footer p{font-size:12px;margin:5px 0;}.bank-sig{display:flex;justify-content:space-between;margin-top:20px;}.bank-sig>div{font-size:12px;}.signature{text-align:right;}.signature div{height:60px;}.signature p{border-top:1px solid #000;padding-top:5px;margin:0;}.thank-you{text-align:center;font-size:10px;margin-top:20px;font-style:italic;}</style></head><body>';
+                                        filtered.forEach(inv=>{
+                                            const calcLine=(it,taxInc)=>{const r=parseFloat(it.rate)||0,q=parseFloat(it.qty)||0;if(taxInc){const base=r/1.05,gst=r-base;return{base:(base*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:(r*q).toFixed(2)};}const gst=r*0.05;return{base:(r*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:((r+gst)*q).toFixed(2)};};
+                                            html+=`<div class="invoice"><div class="header"><div><h1>${config.name}</h1><p>${config.address}</p><p>GSTIN: ${config.gstin}</p><p>Phone: ${config.phone}</p><p>Email: ${config.email}</p></div><div style="text-align:right;"><h2>TAX INVOICE</h2><p><strong>Invoice #:</strong> ${inv.invoiceNumber}</p><p><strong>Date:</strong> ${inv.date}</p></div></div><div class="bill-to"><h3>Bill To:</h3><p><strong>${inv.customer.name}</strong></p><p>${inv.customer.address}</p>${inv.customer.phone?`<p>Phone: ${inv.customer.phone}</p>`:''}${inv.customer.gstin?`<p>GSTIN: ${inv.customer.gstin}</p>`:''}</div><table><thead><tr><th style="width:5%;">#</th><th style="width:30%;">Item</th><th style="width:10%;">HSN</th><th style="width:8%;">Qty</th><th style="width:8%;">Unit</th><th style="width:12%;">Rate</th><th style="width:12%;">Taxable</th><th style="width:15%;">Total</th></tr></thead><tbody>`;
+                                            inv.items.forEach((it,idx)=>{const c=calcLine(it,inv.taxInclusive);html+=`<tr><td>${idx+1}</td><td>${it.name}</td><td>${it.hsn||''}</td><td>${it.qty}</td><td>${it.unit}</td><td class="right">₹${it.rate}</td><td class="right">₹${c.base}</td><td class="right">₹${c.tot}</td></tr>`;});
+                                            html+=`<tr><td colspan="6" style="text-align:right;font-weight:bold;">Subtotal:</td><td colspan="2" class="right" style="font-weight:bold;">₹${inv.totals.sub}</td></tr><tr><td colspan="6" style="text-align:right;">CGST @ 2.5%:</td><td colspan="2" class="right">₹${inv.totals.cg}</td></tr><tr><td colspan="6" style="text-align:right;">SGST @ 2.5%:</td><td colspan="2" class="right">₹${inv.totals.sg}</td></tr><tr><td colspan="6" style="text-align:right;font-weight:bold;font-size:16px;">GRAND TOTAL:</td><td colspan="2" class="right" style="font-weight:bold;font-size:16px;">₹${inv.totals.gt}</td></tr></tbody></table><div class="footer"><p><strong>Amount in Words:</strong> ${inv.totals.words}</p><div class="bank-sig"><div><p><strong>Bank Details:</strong></p><p>Bank: ${config.bankName}</p><p>A/C: ${config.accountNo}</p><p>IFSC: ${config.ifsc}</p></div><div class="signature"><p>For ${config.name}</p><div></div><p>Authorized Signatory</p></div></div><p class="thank-you">Thank you for your business!</p></div></div>`;
+                                        });
+                                        html+='</body></html>';
+                                        printWin.document.write(html);
+                                        printWin.document.close();
+                                        setTimeout(()=>printWin.print(),500);
+                                    },className:'bfilter(inv=>{const d=inv.date;return(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);}).g-green-500 text-white px-4 py-2 rounded mt-6'},'📄 Export Invoices')
+                                )
+                            ),
+                            invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-8'},'No invoices found'):
+                            h('table',{className:'w-full border-collapse'},
+                                h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Invoice #'),h('th',{className:'border p-2'},'Date'),h('th',{className:'border p-2'},'Customer'),h('th',{className:'border p-2'},'Amount'),h('th',{className:'border p-2'},'Action'))),
+                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i},h('td',{className:'border p-2'},inv.invoiceNumber),h('td',{className:'border p-2'},inv.date),h('td',{className:'border p-2'},inv.customer.name),h('td',{className:'border p-2 text-right'},'₹'+inv.totals.gt),h('td',{className:'border p-2 text-center'},
+                                    h('div',{className:'flex gap-1 justify-center'},
+                                        h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 text-white px-3 py-1 rounded text-sm'},'🖨 Reprint'),
+                                        h('button',{onClick:()=>{if(confirm('Delete invoice '+inv.invoiceNumber+'?')){const ni=invs.filter(i=>i.invoiceNumber!==inv.invoiceNumber);setInvs(ni);localStorage.setItem('invoices',JSON.stringify(ni))}},className:'bg-red-500 text-white px-3 py-1 rounded text-sm'},'🗑')
+                                    )
+                                ))))
+                            )
+                        )
+                    )
+                ),
+                h('div',{className:'print-container'},
+                    h('div',{className:'print-header'},
+                        h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
+                            h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config.name),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config.address),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+config.gstin),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+config.phone),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+config.email)),
+                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'20px',fontWeight:'bold',margin:'0 0 10px 0'}},'TAX INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Date: '),invDate))
+                        ),
+                        h('div',{style:{marginBottom:'20px',padding:'10px',border:'1px solid #000'}},h('h3',{style:{fontSize:'14px',fontWeight:'bold',margin:'0 0 5px 0'}},'Bill To:'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},custName)),h('p',{style:{margin:'2px 0',fontSize:'12px'}},custAddr),custPhone&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+custPhone),custGST&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+custGST))
+                    ),
+                    h('table',{className:'invoice-table'},
+                        h('thead',{},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'25%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),h('th',{style:{width:'7%'}},'Qty'),h('th',{style:{width:'7%'}},'Unit'),h('th',{style:{width:'10%'}},'Free'),h('th',{style:{width:'11%',textAlign:'right'}},'Rate'),h('th',{style:{width:'12%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
+                        h('tbody',{},
+                            items.filter(i=>i.name).map((it,idx)=>{const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+(taxInc?c.unitBase:it.rate)),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
+                            parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'Discount ('+discount+'%):'),h('td',{colSpan:2,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
+                            parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.cg)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:2,style:{textAlign:'right'}},'₹'+tots.sg)),
+                            h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'₹'+tots.gt))
+                        )
+                    ),
+                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'12px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'12px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'Bank: '+config.bankName),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'A/C: '+config.accountNo),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'IFSC: '+config.ifsc)),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'12px',margin:'2px 0'}},'For '+config.name),h('div',{style:{height:'60px'}}),h('p',{style:{fontSize:'12px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'10px',marginTop:'20px',fontStyle:'italic'}},'Thank you for your business!'))
+                )
+            );
+        };
+        
+        // Render
+        render(h(BillingApp), document.getElementById('root'));
+        
+    })();
+    </script>
+</body>
+</html>
