@@ -45,7 +45,8 @@ export default async function handler(req, res) {
         if (!response.ok) {
             const error = await response.text();
             console.error('Groq API error:', error);
-            return res.status(response.status).json({ error: 'Failed to get AI response' });
+            console.error('Request body:', JSON.stringify({ messages: [{ role: 'system', content: 'System message' }, ...messages], model: 'mixtral-8x7b-32768' }));
+            return res.status(response.status).json({ error: 'Failed to get AI response', details: error });
         }
 
         const data = await response.json();

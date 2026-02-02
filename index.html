@@ -264,6 +264,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 try {
                     const context = generateContext();
+                    // Filter out the initial assistant greeting and only send conversation history
+                    const conversationHistory = messages.filter(m => m.role === 'user' || (m.role === 'assistant' && m.content !== 'Hi! I\'m your AI assistant. Ask me anything about your business data!'));
                     // Call our serverless API instead of Groq directly
                     const response = await fetch('/api/chat', {
                         method: 'POST',
@@ -271,7 +273,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            messages: [...messages.slice(-5), userMessage],
+                            messages: [...conversationHistory.slice(-5), userMessage],
                             context: context
                         })
                     });
