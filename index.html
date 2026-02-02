@@ -48,7 +48,7 @@
         }
         @media screen { .print-container { display: block; margin-top: 20px; } }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
@@ -1117,7 +1117,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 h('p',{className:'text-xs text-gray-600 mt-2'},tots.words)
                             )
                         )
-                    ):view==='stock'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
+                    )):view==='stock'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
                         h('div',{className:'flex justify-between mb-6'},
                             h('h2',{className:'text-3xl font-bold gradient-text'},'Product Rates'),
                             h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Product')
@@ -1157,24 +1157,26 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         )
                     ):h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
                         h('div',{className:'mb-6'},
-                            h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'Invoice History'),
+                            h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'📜 Invoice History'),
                             h('div',{className:'mb-4'},
                                 h('input',{type:'text',placeholder:'🔍 Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-6 py-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg'})
                             ),
-                            h('div',{className:'flex items-center gap-4 mb-4'},
+                            h('div',{className:'flex items-center gap-4 mb-4 flex-wrap'},
+                                h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'Category'),h('select',{value:categoryFilter,onChange:e=>setCategoryFilter(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:''},'All Categories'),categories.map(cat=>h('option',{key:cat.id,value:cat.id},cat.name)))),
                                 h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
                                 h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg mt-6 transition font-semibold'},'Clear')
+                                h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('');setCategoryFilter('')},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg mt-6 transition font-semibold'},'Clear Filters')
                             )
                         ),
-                        invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-16 text-gray-500 text-lg'},'No invoices found'):
+                        invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());const matchesCategory=!categoryFilter||inv.category_id==categoryFilter;return matchesDate&&matchesSearch&&matchesCategory;}).length===0?h('p',{className:'text-center py-16 text-gray-500 text-lg'},'No invoices found'):
                         h('div',{className:'overflow-x-auto'},
                             h('table',{className:'w-full border-collapse'},
-                                h('thead',{},h('tr',{className:'gradient-bg text-white'},h('th',{className:'border border-gray-300 p-4 text-left'},'Invoice #'),h('th',{className:'border border-gray-300 p-4 text-left'},'Date'),h('th',{className:'border border-gray-300 p-4 text-left'},'Customer'),h('th',{className:'border border-gray-300 p-4 text-right'},'Amount'),h('th',{className:'border border-gray-300 p-4 text-center'},'Status'),h('th',{className:'border border-gray-300 p-4 text-center'},'Actions'))),
-                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i,className:'hover:bg-purple-50 transition'},
+                                h('thead',{},h('tr',{className:'gradient-bg text-white'},h('th',{className:'border border-gray-300 p-4 text-left'},'Invoice #'),h('th',{className:'border border-gray-300 p-4 text-left'},'Date'),h('th',{className:'border border-gray-300 p-4 text-left'},'Customer'),h('th',{className:'border border-gray-300 p-4 text-left'},'Category'),h('th',{className:'border border-gray-300 p-4 text-right'},'Amount'),h('th',{className:'border border-gray-300 p-4 text-center'},'Status'),h('th',{className:'border border-gray-300 p-4 text-center'},'Actions'))),
+                                h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());const matchesCategory=!categoryFilter||inv.category_id==categoryFilter;return matchesDate&&matchesSearch&&matchesCategory;}).map((inv,i)=>h('tr',{key:i,className:'hover:bg-purple-50 transition'},
                                     h('td',{className:'border border-gray-300 p-4 font-bold text-purple-600'},inv.invoiceNumber),
                                     h('td',{className:'border border-gray-300 p-4'},inv.date),
                                     h('td',{className:'border border-gray-300 p-4'},inv.customer.name),
+                                    h('td',{className:'border border-gray-300 p-4'},h('span',{className:'bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium'},inv.category?.name||'N/A')),
                                     h('td',{className:'border border-gray-300 p-4 text-right font-bold'},'₹'+inv.totals.gt),
                                     h('td',{className:'border border-gray-300 p-4 text-center'},
                                         h('span',{className:`status-badge status-${inv.payment_status}`},
@@ -1186,7 +1188,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     ),
                                     h('td',{className:'border border-gray-300 p-4'},
                                         h('div',{className:'flex gap-2 justify-center flex-wrap'},
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
                                             h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
                                             h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
                                         )
