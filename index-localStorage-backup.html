@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart GST Billing System - Cloud</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Smart GST Billing System</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,8 +24,6 @@
         }
         .autocomplete-item { padding: 8px 12px; cursor: pointer; }
         .autocomplete-item:hover { background-color: #f0f0f0; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -39,12 +36,30 @@
         const { useState, useEffect, useRef, createElement: h } = React;
         const { render } = ReactDOM;
         
-        // Initialize Supabase
-        const SUPABASE_URL = 'https://yylahhomjnijsybazxpt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bGFoaG9tam5panN5YmF6eHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTIzMDgsImV4cCI6MjA4NTYyODMwOH0.hkQmKxKSZivIzcEG4_3fVT5wrPbgSy9dL1Y2w44Gb5w';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Business Configuration
+        const getBusinessConfig = () => {
+            const stored = localStorage.getItem('businessConfig');
+            if (stored) return JSON.parse(stored);
+            return {
+                name: "ABC Trading Company",
+                address: "123 Market Street, Business District, Mumbai - 400001",
+                gstin: "27AABCU9603R1ZM",
+                phone: "+91 98765 43210",
+                email: "info@abctrading.com",
+                bankName: "HDFC Bank",
+                accountNo: "50200012345678",
+                ifsc: "HDFC0001234"
+            };
+        };
         
-        // Helper functions
+        const getNextInvoiceNumber = () => {
+            const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+            if (invoices.length === 0) return 'INV-001';
+            const lastInvoice = invoices[invoices.length - 1];
+            const lastNum = parseInt(lastInvoice.invoiceNumber.split('-')[1]);
+            return `INV-${String(lastNum + 1).padStart(3, '0')}`;
+        };
+        
         const numberToWords = (num) => {
             const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
             const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -69,138 +84,67 @@
             return result + ' Only';
         };
         
-        const getCurrentDate = () => new Date().toISOString().split('T')[0];
+        const getCurrentDate = () => {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        };
         
-        // Auth Component
-        const AuthPage = ({ onAuthSuccess }) => {
-            const [isLogin, setIsLogin] = useState(true);
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [rememberMe, setRememberMe] = useState(true);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
+        // AutoComplete Component
+        const AutoComplete = ({ value, onChange, suggestions, placeholder, onSelect }) => {
+            const [showSuggestions, setShowSuggestions] = useState(false);
+            const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+            const wrapperRef = useRef(null);
             
-            const handleAuth = async (e) => {
-                e.preventDefault();
-                setError('');
-                setLoading(true);
-                
-                try {
-                    if (isLogin) {
-                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                        if (error) throw error;
-                        if (rememberMe) {
-                            localStorage.setItem('rememberMe', 'true');
-                        }
-                        onAuthSuccess(data.user);
-                    } else {
-                        const { data, error } = await supabase.auth.signUp({ email, password });
-                        if (error) throw error;
-                        if (data.user && data.user.identities && data.user.identities.length === 0) {
-                            setError('User already exists. Please login.');
-                        } else {
-                            alert('Check your email for verification link!');
-                            setIsLogin(true);
-                        }
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setShowSuggestions(false);
                     }
-                } catch (err) {
-                    setError(err.message);
-                } finally {
-                    setLoading(false);
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+            
+            useEffect(() => {
+                if (value && value.length > 0) {
+                    const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()));
+                    setFilteredSuggestions(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                } else {
+                    setShowSuggestions(false);
                 }
-            };
+            }, [value, suggestions]);
             
-            const handleGoogleAuth = async () => {
-                const { error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: window.location.origin }
-                });
-                if (error) setError(error.message);
-            };
-            
-            return h('div', { className: 'min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600' },
-                h('div', { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-md' },
-                    h('div', { className: 'text-center mb-8' },
-                        h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Smart GST Billing'),
-                        h('p', { className: 'text-gray-600' }, isLogin ? 'Sign in to your account' : 'Create a new account')
-                    ),
-                    error && h('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4' }, error),
-                    h('form', { onSubmit: handleAuth, className: 'space-y-4' },
-                        h('div', {},
-                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
-                            h('input', {
-                                type: 'email',
-                                value: email,
-                                onChange: e => setEmail(e.target.value),
-                                required: true,
-                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-                                placeholder: 'your@email.com'
-                            })
-                        ),
-                        h('div', {},
-                            h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Password'),
-                            h('input', {
-                                type: 'password',
-                                value: password,
-                                onChange: e => setPassword(e.target.value),
-                                required: true,
-                                minLength: 6,
-                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-                                placeholder: '••••••••'
-                            })
-                        ),
-                        isLogin && h('div', { className: 'flex items-center' },
-                            h('input', {
-                                type: 'checkbox',
-                                id: 'remember',
-                                checked: rememberMe,
-                                onChange: e => setRememberMe(e.target.checked),
-                                className: 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
-                            }),
-                            h('label', { htmlFor: 'remember', className: 'ml-2 block text-sm text-gray-700' }, 'Remember me')
-                        ),
-                        h('button', {
-                            type: 'submit',
-                            disabled: loading,
-                            className: 'w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
-                        }, loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')),
-                        h('div', { className: 'relative my-4' },
-                            h('div', { className: 'absolute inset-0 flex items-center' },
-                                h('div', { className: 'w-full border-t border-gray-300' })
-                            ),
-                            h('div', { className: 'relative flex justify-center text-sm' },
-                                h('span', { className: 'px-2 bg-white text-gray-500' }, 'Or continue with')
-                            )
-                        ),
-                        h('button', {
-                            type: 'button',
-                            onClick: handleGoogleAuth,
-                            className: 'w-full bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2'
-                        }, '🔍 Google')
-                    ),
-                    h('div', { className: 'text-center mt-6' },
-                        h('button', {
-                            type: 'button',
-                            onClick: () => { setIsLogin(!isLogin); setError(''); },
-                            className: 'text-blue-600 hover:text-blue-700 text-sm font-medium'
-                        }, isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In")
+            return h('div', { ref: wrapperRef, className: 'relative' },
+                h('input', {
+                    type: 'text',
+                    value: value,
+                    onChange: (e) => onChange(e.target.value),
+                    placeholder: placeholder,
+                    className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                }),
+                showSuggestions && h('div', { className: 'autocomplete-list' },
+                    filteredSuggestions.map((suggestion, index) =>
+                        h('div', {
+                            key: index,
+                            className: 'autocomplete-item',
+                            onClick: () => { onSelect(suggestion); setShowSuggestions(false); }
+                        }, suggestion)
                     )
                 )
             );
         };
         
-        // Main Billing App
-        const BillingApp = ({ user, onLogout }) => {
+        // Main Billing App - FULL VERSION
+        const BillingApp = () => {
             const [view, setView] = useState('invoice');
-            const [loading, setLoading] = useState(true);
             const [invNum, setInvNum] = useState('INV-001');
             const [invDate, setInvDate] = useState(getCurrentDate());
             const [taxInc, setTaxInc] = useState(false);
-            const [config, setConfig] = useState(null);
+            const [config, setConfig] = useState(getBusinessConfig());
             const [fromDate, setFromDate] = useState('');
             const [toDate, setToDate] = useState('');
             const [discount, setDiscount] = useState(0);
-            const [searchQuery, setSearchQuery] = useState('');
             
             const [custName, setCustName] = useState('');
             const [custAddr, setCustAddr] = useState('');
@@ -215,263 +159,16 @@
             const [showStockForm, setShowStockForm] = useState(false);
             const [stockFormData, setStockFormData] = useState({name:'',rate:0});
             const [editingStock, setEditingStock] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
             
-            // Load data on mount
             useEffect(() => {
-                loadAllData();
+                setCusts(JSON.parse(localStorage.getItem('customers')||'[]'));
+                setProds(JSON.parse(localStorage.getItem('products')||'[]'));
+                const loadedInvs = JSON.parse(localStorage.getItem('invoices')||'[]');
+                setInvs(loadedInvs);
+                setStock(JSON.parse(localStorage.getItem('stock')||'[]'));
+                setInvNum(getNextInvoiceNumber());
             }, []);
-            
-            const loadAllData = async () => {
-                setLoading(true);
-                try {
-                    await Promise.all([
-                        loadProfile(),
-                        loadCustomers(),
-                        loadProducts(),
-                        loadInvoices()
-                    ]);
-                    await generateNextInvoiceNumber();
-                } catch (err) {
-                    console.error('Error loading data:', err);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            
-            const loadProfile = async () => {
-                const { data, error } = await supabase
-                    .from('user_profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-                
-                if (data) {
-                    setConfig({
-                        name: data.business_name || 'Your Business Name',
-                        address: data.business_address || 'Your Address',
-                        gstin: data.gstin || '',
-                        phone: data.phone || '',
-                        email: data.email || user.email,
-                        bankName: data.bank_name || '',
-                        accountNo: data.account_no || '',
-                        ifsc: data.ifsc || ''
-                    });
-                } else {
-                    // Create default profile
-                    setConfig({
-                        name: 'Your Business Name',
-                        address: 'Your Address',
-                        gstin: '',
-                        phone: '',
-                        email: user.email,
-                        bankName: '',
-                        accountNo: '',
-                        ifsc: ''
-                    });
-                }
-            };
-            
-            const loadCustomers = async () => {
-                const { data } = await supabase
-                    .from('customers')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('name');
-                if (data) setCusts(data);
-            };
-            
-            const loadProducts = async () => {
-                const { data } = await supabase
-                    .from('product_rates')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('name');
-                if (data) {
-                    setStock(data);
-                    setProds(data);
-                }
-            };
-            
-            const loadInvoices = async () => {
-                const { data } = await supabase
-                    .from('invoices')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false });
-                
-                if (data) {
-                    // Transform to match old format
-                    const transformed = await Promise.all(data.map(async inv => {
-                        const { data: items } = await supabase
-                            .from('invoice_items')
-                            .select('*')
-                            .eq('invoice_id', inv.id);
-                        
-                        return {
-                            invoiceNumber: inv.invoice_number,
-                            date: inv.date,
-                            customer: {
-                                name: inv.customer_name,
-                                address: inv.customer_address,
-                                gstin: inv.customer_gstin,
-                                phone: inv.customer_phone
-                            },
-                            items: items.map(it => ({
-                                name: it.item_name,
-                                hsn: it.hsn,
-                                qty: it.quantity,
-                                unit: it.unit,
-                                rate: it.rate,
-                                freeQty: it.free_qty,
-                                freeUnit: it.free_unit,
-                                discount: it.discount
-                            })),
-                            taxInclusive: inv.tax_inclusive,
-                            discount: inv.discount,
-                            totals: {
-                                sub: inv.subtotal,
-                                discAmt: inv.discount_amount,
-                                afterDisc: inv.after_discount,
-                                cg: inv.cgst,
-                                sg: inv.sgst,
-                                gt: inv.grand_total,
-                                tq: inv.total_quantity,
-                                ti: inv.total_items,
-                                words: inv.amount_words
-                            },
-                            id: inv.id
-                        };
-                    }));
-                    setInvs(transformed);
-                }
-            };
-            
-            const generateNextInvoiceNumber = async () => {
-                const { data } = await supabase
-                    .from('invoices')
-                    .select('invoice_number')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-                
-                if (data && data.length > 0) {
-                    const lastNum = parseInt(data[0].invoice_number.split('-')[1]);
-                    setInvNum(`INV-${String(lastNum + 1).padStart(3, '0')}`);
-                } else {
-                    setInvNum('INV-001');
-                }
-            };
-            
-            const saveProfile = async () => {
-                const { error } = await supabase
-                    .from('user_profiles')
-                    .upsert({
-                        id: user.id,
-                        business_name: config.name,
-                        business_address: config.address,
-                        gstin: config.gstin,
-                        phone: config.phone,
-                        email: config.email,
-                        bank_name: config.bankName,
-                        account_no: config.accountNo,
-                        ifsc: config.ifsc
-                    });
-                
-                if (!error) alert('Settings saved!');
-            };
-            
-            const saveInvoice = async () => {
-                const tots = calcTotals();
-                
-                // Insert invoice
-                const { data: invData, error: invError } = await supabase
-                    .from('invoices')
-                    .insert({
-                        user_id: user.id,
-                        invoice_number: invNum,
-                        date: invDate,
-                        customer_name: custName,
-                        customer_address: custAddr,
-                        customer_gstin: custGST,
-                        customer_phone: custPhone,
-                        tax_inclusive: taxInc,
-                        discount: parseFloat(discount) || 0,
-                        subtotal: parseFloat(tots.sub),
-                        discount_amount: parseFloat(tots.discAmt),
-                        after_discount: parseFloat(tots.afterDisc),
-                        cgst: parseFloat(tots.cg),
-                        sgst: parseFloat(tots.sg),
-                        grand_total: parseFloat(tots.gt),
-                        total_quantity: tots.tq,
-                        total_items: tots.ti,
-                        amount_words: tots.words
-                    })
-                    .select()
-                    .single();
-                
-                if (invError) {
-                    alert('Error saving invoice: ' + invError.message);
-                    return;
-                }
-                
-                // Insert invoice items
-                const itemsToInsert = items.filter(i => i.name).map(it => {
-                    const c = calcLine(it);
-                    return {
-                        invoice_id: invData.id,
-                        item_name: it.name,
-                        hsn: it.hsn,
-                        quantity: parseFloat(it.qty),
-                        unit: it.unit,
-                        rate: parseFloat(it.rate),
-                        free_qty: parseFloat(it.freeQty) || 0,
-                        free_unit: it.freeUnit,
-                        discount: parseFloat(it.discount) || 0,
-                        base_amount: parseFloat(c.base),
-                        cgst: parseFloat(c.cgst),
-                        sgst: parseFloat(c.sgst),
-                        total: parseFloat(c.tot)
-                    };
-                });
-                
-                await supabase.from('invoice_items').insert(itemsToInsert);
-                
-                // Save customer if new
-                if (custName && !custs.find(c => c.name === custName)) {
-                    await supabase.from('customers').insert({
-                        user_id: user.id,
-                        name: custName,
-                        address: custAddr,
-                        gstin: custGST,
-                        phone: custPhone
-                    });
-                }
-                
-                // Save products if new
-                for (const it of items.filter(i => i.name)) {
-                    if (!prods.find(p => p.name === it.name)) {
-                        await supabase.from('product_rates').insert({
-                            user_id: user.id,
-                            name: it.name,
-                            rate: parseFloat(it.rate) || 0
-                        });
-                    }
-                }
-                
-                await loadAllData();
-                window.print();
-            };
-            
-            const deleteInvoice = async (inv) => {
-                if (!confirm('Delete invoice ' + inv.invoiceNumber + '?')) return;
-                
-                const { error } = await supabase
-                    .from('invoices')
-                    .delete()
-                    .eq('id', inv.id);
-                
-                if (!error) await loadInvoices();
-            };
             
             const calcLine = (item) => {
                 const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
@@ -497,24 +194,16 @@
             
             const tots = calcTotals();
             
-            if (loading || !config) {
-                return h('div', { className: 'min-h-screen flex items-center justify-center' },
-                    h('div', { className: 'loader' })
-                );
-            }
-            
             return h('div',{},
                 h('div',{className:'no-print min-h-screen'},
                     h('div',{className:'bg-blue-600 text-white p-4 shadow-lg'},
                         h('div',{className:'container mx-auto flex justify-between items-center'},
                             h('h1',{className:'text-2xl font-bold'},'Smart GST Billing System'),
-                            h('div',{className:'flex items-center space-x-4'},
-                                h('span',{className:'text-sm'},user.email),
+                            h('div',{className:'flex space-x-2'},
                                 h('button',{onClick:()=>setView('invoice'),className:`px-4 py-2 rounded ${view==='invoice'?'bg-white text-blue-600':'bg-blue-500'}`},'Invoice'),
                                 h('button',{onClick:()=>setView('stock'),className:`px-4 py-2 rounded ${view==='stock'?'bg-white text-blue-600':'bg-blue-500'}`},'Products'),
                                 h('button',{onClick:()=>setView('history'),className:`px-4 py-2 rounded ${view==='history'?'bg-white text-blue-600':'bg-blue-500'}`},'History'),
-                                h('button',{onClick:()=>setView('settings'),className:`px-4 py-2 rounded ${view==='settings'?'bg-white text-blue-600':'bg-blue-500'}`},'Settings'),
-                                h('button',{onClick:onLogout,className:'px-4 py-2 rounded bg-red-500 hover:bg-red-600'},'Logout')
+                                h('button',{onClick:()=>setView('settings'),className:`px-4 py-2 rounded ${view==='settings'?'bg-white text-blue-600':'bg-blue-500'}`},'Settings')
                             )
                         )
                     ),
@@ -534,13 +223,21 @@
                                     h('div',{},h('label',{className:'block font-semibold mb-2'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-3 py-2 border rounded'})),
                                     h('div',{},h('label',{className:'block font-semibold mb-2'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-3 py-2 border rounded'}))
                                 ),
-                                h('button',{onClick:saveProfile,className:'bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600'},'💾 Save Settings')
+                                h('button',{onClick:()=>{localStorage.setItem('businessConfig',JSON.stringify(config));alert('Saved!')},className:'bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600'},'💾 Save Settings')
                             )
                         ):view==='invoice'?h('div',{className:'bg-white rounded-lg shadow-lg p-6'},
                             h('div',{className:'flex justify-between mb-4 pb-4 border-b'},
                                 h('div',{className:'flex space-x-4'},
-                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 text-white px-4 py-2 rounded'},'🆕 New'),
-                                    h('button',{onClick:saveInvoice,className:'bg-blue-500 text-white px-4 py-2 rounded'},'💾 Save & Print')
+                                    h('button',{onClick:()=>{setInvNum(getNextInvoiceNumber());setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 text-white px-4 py-2 rounded'},'🆕 New'),
+                                    h('button',{onClick:()=>{
+                                        if(custName&&!custs.find(c=>c.name===custName)){const nc=[...custs,{name:custName,address:custAddr,gstin:custGST,phone:custPhone}];setCusts(nc);localStorage.setItem('customers',JSON.stringify(nc));}
+                                        items.forEach(i=>{if(i.name&&!prods.find(p=>p.name===i.name)){const np=[...prods,{name:i.name,rate:i.rate,unit:i.unit}];setProds(np);localStorage.setItem('products',JSON.stringify(np));}});
+                                        let updatedStock=[...stock];
+                                        items.filter(i=>i.name).forEach(i=>{const stk=updatedStock.find(s=>s.name===i.name);if(!stk){updatedStock.push({name:i.name,rate:parseFloat(i.rate)||0})}});
+                                        setStock(updatedStock);localStorage.setItem('stock',JSON.stringify(updatedStock));
+                                        const inv={invoiceNumber:invNum,date:invDate,customer:{name:custName,address:custAddr,gstin:custGST,phone:custPhone},items:items.filter(i=>i.name),taxInclusive:taxInc,discount:discount,totals:tots,timestamp:new Date().toISOString()};
+                                        const ni=[...invs,inv];setInvs(ni);localStorage.setItem('invoices',JSON.stringify(ni));window.print();
+                                    },className:'bg-blue-500 text-white px-4 py-2 rounded'},'💾 Save & Print')
                                 ),
                                 h('div',{className:'flex items-center space-x-2'},
                                     h('label',{className:'font-semibold'},'Tax Included?'),
@@ -574,11 +271,11 @@
                                     h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id},
                                         h('td',{className:'border p-2'},idx+1),
                                         h('td',{className:'border p-2 relative'},
-                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-2 py-1 border rounded'}),
+                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate,unit:p.unit}:i))}},className:'w-full px-2 py-1 border rounded'}),
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
                                             h('div',{className:'absolute z-[9999] w-64 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto top-full left-0 mt-1'},
                                                 prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},p.name+' - ₹'+p.rate)
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,unit:p.unit}:im)),className:'px-3 py-2 hover:bg-blue-100 cursor-pointer border-b'},p.name+' - ₹'+p.rate)
                                                 )
                                             )
                                         ),
@@ -599,10 +296,7 @@
                                 h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,freeQty:0,freeUnit:'Pcs',discount:0}]),className:'mt-2 bg-blue-500 text-white px-4 py-2 rounded'},'➕ Add Item')
                             ),
                             h('div',{className:'grid grid-cols-2 gap-4'},
-                                h('div',{className:'p-4 bg-gray-50 rounded'},
-                                    h('h3',{className:'font-bold mb-2'},'Overall Discount %'),
-                                    h('input',{type:'number',value:discount,onChange:e=>setDiscount(e.target.value),className:'w-full px-3 py-2 border rounded',step:0.01,min:0,max:100,placeholder:'0'})
-                                ),
+                                h('div',{className:'p-4 bg-gray-50 rounded'},h('h3',{className:'font-bold mb-2'},'Summary'),h('p',{},'Items: '+tots.ti),h('p',{},'Quantity: '+tots.tq)),
                                 h('div',{className:'p-4 bg-blue-50 rounded'},
                                     h('h3',{className:'font-bold mb-2'},'Totals'),
                                     h('p',{},'Subtotal: ₹'+tots.sub),
@@ -626,7 +320,7 @@
                                     h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-3 py-2 border rounded',step:0.01})
                                 ),
                                 h('div',{className:'flex gap-2'},
-                                    h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0})}}},className:'bg-blue-500 text-white px-4 py-2 rounded'},'Save'),
+                                    h('button',{onClick:()=>{if(stockFormData.name){const existing=stock.find(s=>s.name===stockFormData.name);if(existing){const ns=stock.map(s=>s.name===stockFormData.name?{...s,rate:parseFloat(stockFormData.rate)||0}:s);setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}else{const ns=[...stock,{name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0}];setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}setShowStockForm(false);setStockFormData({name:'',rate:0})}},className:'bg-blue-500 text-white px-4 py-2 rounded'},'Save'),
                                     h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 text-white px-4 py-2 rounded'},'Cancel')
                                 )
                             ),
@@ -647,12 +341,12 @@
                                     h('td',{className:'border p-2 text-center'},
                                         editingStock===i?
                                         h('div',{className:'flex gap-1 justify-center'},
-                                            h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'bg-green-500 text-white px-2 py-1 rounded text-sm'},'✓'),
-                                            h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'bg-gray-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                            h('button',{onClick:()=>{localStorage.setItem('stock',JSON.stringify(stock));setEditingStock(null)},className:'bg-green-500 text-white px-2 py-1 rounded text-sm'},'✓'),
+                                            h('button',{onClick:()=>{setStock(JSON.parse(localStorage.getItem('stock')||'[]'));setEditingStock(null)},className:'bg-gray-500 text-white px-2 py-1 rounded text-sm'},'✕')
                                         ):
                                         h('div',{className:'flex gap-1 justify-center'},
                                             h('button',{onClick:()=>setEditingStock(i),className:'bg-blue-500 text-white px-2 py-1 rounded text-sm'},'Edit'),
-                                            h('button',{onClick:async()=>{if(confirm('Delete '+s.name+'?')){await supabase.from('product_rates').delete().eq('id',s.id);await loadProducts()}},className:'bg-red-500 text-white px-2 py-1 rounded text-sm'},'✕')
+                                            h('button',{onClick:()=>{if(confirm('Delete '+s.name+'?')){const ns=stock.filter(st=>st.name!==s.name);setStock(ns);localStorage.setItem('stock',JSON.stringify(ns))}},className:'bg-red-500 text-white px-2 py-1 rounded text-sm'},'✕')
                                         )
                                     )
                                 )))
@@ -666,7 +360,23 @@
                                 h('div',{className:'flex items-center gap-4 mb-4'},
                                     h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'From Date'),h('input',{type:'date',value:fromDate,onChange:e=>setFromDate(e.target.value),className:'px-3 py-2 border rounded'})),
                                     h('div',{},h('label',{className:'block text-sm font-semibold mb-1'},'To Date'),h('input',{type:'date',value:toDate,onChange:e=>setToDate(e.target.value),className:'px-3 py-2 border rounded'})),
-                                    h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 text-white px-4 py-2 rounded mt-6'},'Clear')
+                                    h('button',{onClick:()=>{setFromDate('');setToDate('');setSearchQuery('')},className:'bg-gray-500 text-white px-4 py-2 rounded mt-6'},'Clear'),
+                                    h('button',{onClick:()=>{
+                                        const filtered=invs.filter(inv=>{const d=inv.date;return(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);});
+                                        if(!filtered.length)return alert('No invoices in date range!');
+                                        const printWin=window.open('','_blank');
+                                        let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>All Invoices</title><style>@page{size:A4;margin:15mm;}body{font-family:Arial,sans-serif;margin:0;padding:20px;}.invoice{page-break-after:always;margin-bottom:40px;}.invoice:last-child{page-break-after:auto;}.header{display:flex;justify-content:space-between;margin-bottom:20px;}.header h1{font-size:24px;margin:0 0 10px 0;}.header h2{font-size:20px;margin:0 0 10px 0;}.header p{margin:2px 0;font-size:12px;}.bill-to{margin-bottom:20px;padding:10px;border:1px solid #000;}.bill-to h3{font-size:14px;margin:0 0 5px 0;}.bill-to p{margin:2px 0;font-size:12px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}table th,table td{border:1px solid #000;padding:8px;font-size:12px;}table th{background:#f0f0f0;font-weight:bold;}table td{text-align:left;}table td.right{text-align:right;}.footer{margin-top:20px;}.footer p{font-size:12px;margin:5px 0;}.bank-sig{display:flex;justify-content:space-between;margin-top:20px;}.bank-sig>div{font-size:12px;}.signature{text-align:right;}.signature div{height:60px;}.signature p{border-top:1px solid #000;padding-top:5px;margin:0;}.thank-you{text-align:center;font-size:10px;margin-top:20px;font-style:italic;}</style></head><body>';
+                                        filtered.forEach(inv=>{
+                                            const calcLine=(it,taxInc)=>{const r=parseFloat(it.rate)||0,q=parseFloat(it.qty)||0;if(taxInc){const base=r/1.05,gst=r-base;return{base:(base*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:(r*q).toFixed(2)};}const gst=r*0.05;return{base:(r*q).toFixed(2),cgst:((gst/2)*q).toFixed(2),sgst:((gst/2)*q).toFixed(2),tot:((r+gst)*q).toFixed(2)};};
+                                            html+=`<div class="invoice"><div class="header"><div><h1>${config.name}</h1><p>${config.address}</p><p>GSTIN: ${config.gstin}</p><p>Phone: ${config.phone}</p><p>Email: ${config.email}</p></div><div style="text-align:right;"><h2>TAX INVOICE</h2><p><strong>Invoice #:</strong> ${inv.invoiceNumber}</p><p><strong>Date:</strong> ${inv.date}</p></div></div><div class="bill-to"><h3>Bill To:</h3><p><strong>${inv.customer.name}</strong></p><p>${inv.customer.address}</p>${inv.customer.phone?`<p>Phone: ${inv.customer.phone}</p>`:''}${inv.customer.gstin?`<p>GSTIN: ${inv.customer.gstin}</p>`:''}</div><table><thead><tr><th style="width:5%;">#</th><th style="width:30%;">Item</th><th style="width:10%;">HSN</th><th style="width:8%;">Qty</th><th style="width:8%;">Unit</th><th style="width:12%;">Rate</th><th style="width:12%;">Taxable</th><th style="width:15%;">Total</th></tr></thead><tbody>`;
+                                            inv.items.forEach((it,idx)=>{const c=calcLine(it,inv.taxInclusive);html+=`<tr><td>${idx+1}</td><td>${it.name}</td><td>${it.hsn||''}</td><td>${it.qty}</td><td>${it.unit}</td><td class="right">₹${it.rate}</td><td class="right">₹${c.base}</td><td class="right">₹${c.tot}</td></tr>`;});
+                                            html+=`<tr><td colspan="6" style="text-align:right;font-weight:bold;">Subtotal:</td><td colspan="2" class="right" style="font-weight:bold;">₹${inv.totals.sub}</td></tr><tr><td colspan="6" style="text-align:right;">CGST @ 2.5%:</td><td colspan="2" class="right">₹${inv.totals.cg}</td></tr><tr><td colspan="6" style="text-align:right;">SGST @ 2.5%:</td><td colspan="2" class="right">₹${inv.totals.sg}</td></tr><tr><td colspan="6" style="text-align:right;font-weight:bold;font-size:16px;">GRAND TOTAL:</td><td colspan="2" class="right" style="font-weight:bold;font-size:16px;">₹${inv.totals.gt}</td></tr></tbody></table><div class="footer"><p><strong>Amount in Words:</strong> ${inv.totals.words}</p><div class="bank-sig"><div><p><strong>Bank Details:</strong></p><p>Bank: ${config.bankName}</p><p>A/C: ${config.accountNo}</p><p>IFSC: ${config.ifsc}</p></div><div class="signature"><p>For ${config.name}</p><div></div><p>Authorized Signatory</p></div></div><p class="thank-you">Thank you for your business!</p></div></div>`;
+                                        });
+                                        html+='</body></html>';
+                                        printWin.document.write(html);
+                                        printWin.document.close();
+                                        setTimeout(()=>printWin.print(),500);
+                                    },className:'bfilter(inv=>{const d=inv.date;return(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);}).g-green-500 text-white px-4 py-2 rounded mt-6'},'📄 Export Invoices')
                                 )
                             ),
                             invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).length===0?h('p',{className:'text-center py-8'},'No invoices found'):
@@ -674,8 +384,8 @@
                                 h('thead',{},h('tr',{className:'bg-gray-200'},h('th',{className:'border p-2'},'Invoice #'),h('th',{className:'border p-2'},'Date'),h('th',{className:'border p-2'},'Customer'),h('th',{className:'border p-2'},'Amount'),h('th',{className:'border p-2'},'Action'))),
                                 h('tbody',{},invs.filter(inv=>{const d=inv.date;const matchesDate=(!fromDate||d>=fromDate)&&(!toDate||d<=toDate);const matchesSearch=!searchQuery||inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())||inv.customer.name.toLowerCase().includes(searchQuery.toLowerCase());return matchesDate&&matchesSearch;}).map((inv,i)=>h('tr',{key:i},h('td',{className:'border p-2'},inv.invoiceNumber),h('td',{className:'border p-2'},inv.date),h('td',{className:'border p-2'},inv.customer.name),h('td',{className:'border p-2 text-right'},'₹'+inv.totals.gt),h('td',{className:'border p-2 text-center'},
                                     h('div',{className:'flex gap-1 justify-center'},
-                                        h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 text-white px-3 py-1 rounded text-sm'},'🖨 Reprint'),
-                                        h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 text-white px-3 py-1 rounded text-sm'},'🗑')
+                                        h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 text-white px-3 py-1 rounded text-sm'},'🖨 Reprint'),
+                                        h('button',{onClick:()=>{if(confirm('Delete invoice '+inv.invoiceNumber+'?')){const ni=invs.filter(i=>i.invoiceNumber!==inv.invoiceNumber);setInvs(ni);localStorage.setItem('invoices',JSON.stringify(ni))}},className:'bg-red-500 text-white px-3 py-1 rounded text-sm'},'🗑')
                                     )
                                 ))))
                             )
@@ -707,47 +417,8 @@
             );
         };
         
-        // Main App with Auth
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-            
-            useEffect(() => {
-                // Check for existing session
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                    setUser(session?.user ?? null);
-                    setLoading(false);
-                });
-                
-                // Listen for auth changes
-                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-                    setUser(session?.user ?? null);
-                });
-                
-                return () => subscription.unsubscribe();
-            }, []);
-            
-            const handleLogout = async () => {
-                await supabase.auth.signOut();
-                localStorage.removeItem('rememberMe');
-                setUser(null);
-            };
-            
-            if (loading) {
-                return h('div', { className: 'min-h-screen flex items-center justify-center' },
-                    h('div', { className: 'loader' })
-                );
-            }
-            
-            if (!user) {
-                return h(AuthPage, { onAuthSuccess: setUser });
-            }
-            
-            return h(BillingApp, { user, onLogout: handleLogout });
-        };
-        
         // Render
-        render(h(App), document.getElementById('root'));
+        render(h(BillingApp), document.getElementById('root'));
         
     })();
     </script>
