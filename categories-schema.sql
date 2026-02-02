@@ -45,9 +45,16 @@ CREATE INDEX IF NOT EXISTS idx_invoices_category_id ON public.invoices(category_
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 
 -- Insert default categories for existing users (only if they don't have any)
-INSERT INTO public.categories (user_id, name, description, default_hsn, has_mrp)
-SELECT DISTINCT user_id, 'General Bills', 'Standard billing category', '33074100', false
-FROM public.user_profiles
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.categories WHERE categories.user_id = user_profiles.user_id
-);
+DO $$
+BEGIN
+    INSERT INTO public.categories (user_id, name, description, default_hsn, has_mrp)
+    SELECT DISTINCT user_id, 'General Bills', 'Standard billing category', '33074100', false
+    FROM public.user_profiles
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.categories WHERE categories.user_id = user_profiles.user_id
+    );
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Skip if any error occurs (table might not have data yet)
+        NULL;
+END $$;
