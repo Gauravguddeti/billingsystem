@@ -46,7 +46,7 @@
             h1, h2, h3 { margin: 5px 0; }
             p { margin: 2px 0; }
         }
-        @media screen { .print-container { display: block; margin-top: 20px; } }
+        @media screen { .print-container { display: none; } }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .card-hover { transition: all 0.3s ease; }
@@ -680,7 +680,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             has_mrp: categoryFormData.has_mrp
                         })
                         .eq('id', editingCategory.id);
-                    if (!error) {
+                    if (error) {
+                        alert('Error updating category: ' + error.message + '\n\nPlease run categories-schema.sql in Supabase first!');
+                        console.error('Category update error:', error);
+                    } else {
                         await loadCategories();
                         setShowCategoryForm(false);
                         setEditingCategory(null);
@@ -697,7 +700,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             default_hsn: categoryFormData.default_hsn,
                             has_mrp: categoryFormData.has_mrp
                         });
-                    if (!error) {
+                    if (error) {
+                        alert('Error adding category: ' + error.message + '\n\nPlease run categories-schema.sql in Supabase first!');
+                        console.error('Category insert error:', error);
+                    } else {
                         await loadCategories();
                         setShowCategoryForm(false);
                         setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false});
