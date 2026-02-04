@@ -10,8 +10,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        * { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+        
+        /* Print Styles */
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 15px; font-size: 11px; }
@@ -47,19 +49,130 @@
             h1, h2, h3 { margin: 5px 0; }
             p { margin: 2px 0; }
         }
+        
         @media screen { .print-container { display: none; } }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Enhanced Gradients & Effects */
+        .gradient-bg { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        .gradient-text { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            background-clip: text; 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+        
+        /* Improved Card Hover with Mobile Support */
+        .card-hover { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media (hover: hover) {
+            .card-hover:hover { 
+                transform: translateY(-5px); 
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+            }
+        }
+        .card-hover:active {
+            transform: translateY(-2px);
+        }
+        
+        /* Loading Animation */
+        .loader { 
+            border: 4px solid #f3f4f6; 
+            border-top: 4px solid #667eea; 
+            border-radius: 50%; 
+            width: 48px; 
+            height: 48px; 
+            animation: spin 0.8s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
+        /* Chat Bubble Animation */
         .chat-bubble { animation: fadeInUp 0.3s ease; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; }
+        @keyframes fadeInUp { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        /* Status Badges */
+        .status-badge { 
+            display: inline-flex; 
+            align-items: center; 
+            padding: 0.375rem 1rem; 
+            border-radius: 9999px; 
+            font-size: 0.875rem; 
+            font-weight: 600;
+            text-transform: capitalize;
+            letter-spacing: 0.025em;
+        }
         .status-paid { background-color: #d1fae5; color: #065f46; }
         .status-unpaid { background-color: #fee2e2; color: #991b1b; }
         .status-partial { background-color: #fef3c7; color: #92400e; }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body { font-size: 14px; }
+            .mobile-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .mobile-stack { flex-direction: column !important; }
+            .mobile-full { width: 100% !important; }
+            .mobile-text-sm { font-size: 0.875rem !important; }
+            .mobile-p-2 { padding: 0.5rem !important; }
+            .mobile-hidden { display: none !important; }
+        }
+        
+        /* Better Input Styles */
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            ring-width: 2px;
+            ring-color: #667eea;
+            border-color: #667eea;
+        }
+        
+        /* Touch-Friendly Buttons */
+        button, .btn {
+            min-height: 44px;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Smooth Transitions */
+        * {
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+        }
+        
+        /* Fixed Mobile Navigation */
+        @media (max-width: 768px) {
+            .mobile-nav {
+                position: sticky;
+                top: 0;
+                z-index: 30;
+                background: white;
+                padding: 0.5rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+        }
+        
+        /* Better Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -1119,31 +1232,31 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const NavButton = ({icon, label, viewName}) => 
                 h('button', {
                     onClick: () => setView(viewName),
-                    className: `flex items-center gap-2 px-4 py-2 rounded-lg transition ${view === viewName ? 'gradient-bg text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`
-                }, icon, ' ', label);
+                    className: `flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg transition whitespace-nowrap text-sm md:text-base font-medium ${view === viewName ? 'gradient-bg text-white shadow-lg' : 'bg-white text-gray-700 hover:bg-gray-100 shadow'}`
+                }, icon, ' ', h('span',{className:'hidden sm:inline'},label));
             
             return h(React.Fragment, null,
                 h('div',{className:'no-print min-h-screen bg-gray-50'},
                 // Top Navigation
-                h('div',{className:'gradient-bg text-white shadow-xl'},
-                    h('div',{className:'container mx-auto px-6 py-4'},
-                        h('div',{className:'flex items-center justify-between'},
-                            h('div',{className:'flex items-center gap-3'},
-                                h('div',{className:'text-3xl'},'💼'),
-                                h('h1',{className:'text-2xl font-bold'},'Smart GST Billing')
+                h('div',{className:'gradient-bg text-white shadow-xl sticky top-0 z-40'},
+                    h('div',{className:'container mx-auto px-4 md:px-6 py-3 md:py-4'},
+                        h('div',{className:'flex items-center justify-between gap-2'},
+                            h('div',{className:'flex items-center gap-2 md:gap-3'},
+                                h('div',{className:'text-2xl md:text-3xl'},'💼'),
+                                h('h1',{className:'text-lg md:text-2xl font-bold truncate'},'Smart GST Billing')
                             ),
-                            h('div',{className:'flex items-center gap-4'},
-                                h('span',{className:'text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full'}, user.email),
-                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition'},'🤖 AI Assistant'),
-                                h('button',{onClick:onLogout,className:'bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition'},'Logout')
+                            h('div',{className:'flex items-center gap-2 md:gap-4'},
+                                h('span',{className:'hidden md:inline text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full truncate max-w-[150px]'}, user.email),
+                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 p-2 md:px-4 md:py-2 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'🤖 AI'),h('span',{className:'md:hidden'},'🤖')),
+                                h('button',{onClick:onLogout,className:'bg-red-500 hover:bg-red-600 px-2 py-2 md:px-4 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'Logout'),h('span',{className:'md:hidden'},'🚪'))
                             )
                         )
                     )
                 ),
                 
                 // Side Navigation
-                h('div',{className:'container mx-auto px-6 py-6'},
-                    h('div',{className:'flex gap-4 mb-6 overflow-x-auto pb-2'},
+                h('div',{className:'container mx-auto px-2 md:px-6 py-3 md:py-6'},
+                    h('div',{className:'mobile-scroll flex gap-2 md:gap-4 mb-4 md:mb-6 pb-2 scrollbar-thin'},
                         h(NavButton, {icon:'📊', label:'Dashboard', viewName:'dashboard'}),
                         h(NavButton, {icon:'📝', label:'Invoice', viewName:'invoice'}),
                         h(NavButton, {icon:'📦', label:'Products', viewName:'stock'}),
@@ -1153,13 +1266,13 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     
                     // Main Content
                     view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
-                    view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
-                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'⚙️ Settings'),
+                    view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-4 md:p-8'},
+                        h('h2',{className:'text-2xl md:text-3xl font-bold mb-4 md:mb-6 gradient-text'},'⚙️ Settings'),
                         
                         // Business Settings Section
-                        h('div',{className:'mb-12'},
-                            h('h3',{className:'text-2xl font-bold mb-4 text-gray-800'},'Business Information'),
-                            h('div',{className:'max-w-3xl space-y-6'},
+                        h('div',{className:'mb-8 md:mb-12'},
+                            h('h3',{className:'text-xl md:text-2xl font-bold mb-4 text-gray-800'},'Business Information'),
+                            h('div',{className:'max-w-3xl space-y-4 md:space-y-6'},
                                 h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
                                 h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:3})),
                                 h('div',{className:'grid grid-cols-2 gap-6'},
@@ -1242,10 +1355,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('button',{onClick:()=>{setSelectedCategory(null);setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'text-gray-500 hover:text-gray-700 transition'},'← Back'),
                                     h('h3',{className:'text-xl font-bold gradient-text'},selectedCategory.name)
                                 ),
-                                h('div',{className:'flex gap-4'},
-                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);clearInvoiceCache()},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
-                                    h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
-                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate)},className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
+                                h('div',{className:'flex flex-wrap gap-2 md:gap-4'},
+                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);clearInvoiceCache()},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🆕 New'),
+                                    h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:opacity-90 transition font-semibold text-sm md:text-base'},'💾 Save'),
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🖨 Print')
                                 )
                             ),
                             h('div',{className:'flex items-center gap-3'},
@@ -1277,14 +1390,14 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         ),
                         h('div',{className:'mb-6'},
                             h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Invoice Items'),
-                            h('div',{className:'overflow-x-auto',style:{overflowY:'visible'}},
-                                h('table',{className:'w-full border-collapse'},
+                            h('div',{className:'mobile-scroll overflow-x-auto shadow-md rounded-lg',style:{overflowY:'visible'}},
+                                h('table',{className:'w-full border-collapse min-w-[800px]'},
                                     h('thead',{},h('tr',{className:'gradient-bg text-white'},
-                                        h('th',{className:'border border-gray-300 p-3 text-left'},'#'),
-                                        h('th',{className:'border border-gray-300 p-3 text-left'},'Item'),
-                                        selectedCategory?.has_mrp&&h('th',{className:'border border-gray-300 p-3 text-left'},'MRP'),
-                                        h('th',{className:'border border-gray-300 p-3 text-left'},'Qty'),
-                                        h('th',{className:'border border-gray-300 p-3 text-left'},'Unit'),
+                                        h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'#'),
+                                        h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Item'),
+                                        selectedCategory?.has_mrp&&h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'MRP'),
+                                        h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Qty'),
+                                        h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Unit'),
                                         h('th',{className:'border border-gray-300 p-3 text-left'},'Free'),
                                         h('th',{className:'border border-gray-300 p-3 text-left'},'Rate'),
                                         h('th',{className:'border border-gray-300 p-3 text-left'},'Disc'),
