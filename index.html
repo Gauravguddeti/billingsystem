@@ -1283,7 +1283,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 ),
                 
                 // Print Container
-                items.filter(i=>i.name).length>0&&h('div',{className:'print-container'},
+                h('div',{className:'print-container'},
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
                             h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config.name),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config.address),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+config.gstin),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+config.phone),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+config.email)),
