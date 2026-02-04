@@ -732,6 +732,18 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     return;
                 }
                 
+                // Validate all items have quantity and rate
+                const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));
+                if (invalidItems.length > 0) {
+                    alert('Please fill quantity AND rate for all items before saving!');
+                    return;
+                }
+                
+                if (items.filter(i => i.name).length === 0) {
+                    alert('Please add at least one item to the invoice!');
+                    return;
+                }
+                
                 const tots = calcTotals();
                 
                 const { data: invData, error: invError } = await supabase
@@ -1041,7 +1053,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 h('div',{className:'flex gap-4'},
                                     h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
                                     h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
-                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>window.print(),className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}window.print()},className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
                                 )
                             ),
                             h('div',{className:'flex items-center gap-3'},
@@ -1092,9 +1104,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('td',{className:'border border-gray-300 p-3 relative'},
                                             h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
-                                            h('div',{className:'absolute z-[9999] w-80 bg-white border-2 border-purple-200 rounded-lg shadow-xl max-h-48 overflow-y-auto top-full left-0 mt-1'},
-                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-50 cursor-pointer border-b transition'},p.name+' - ₹'+p.rate)
+                                            h('div',{className:'absolute z-[9999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl max-h-64 overflow-y-auto top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
+                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,10).map((p,i)=>
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 transition flex justify-between items-center'},
+                                                        h('span',{className:'font-medium text-gray-800'},p.name),
+                                                        h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
+                                                    )
                                                 )
                                             )
                                         ),
@@ -1208,7 +1223,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     ),
                                     h('td',{className:'border border-gray-300 p-4'},
                                         h('div',{className:'flex gap-2 justify-center flex-wrap'},
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');setItems(inv.items.map((it,idx)=>({...it,id:idx+1})));setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice');setTimeout(()=>window.print(),100)},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.item_name,hsn:it.hsn,qty:it.quantity,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.free_qty||0,freeUnit:it.free_unit||'Pcs',discount:it.discount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setTimeout(()=>window.print(),100)},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.item_name,hsn:it.hsn,qty:it.quantity,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.free_qty||0,freeUnit:it.free_unit||'Pcs',discount:it.discount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'✏️ Edit'),
                                             h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
                                             h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
                                         )
