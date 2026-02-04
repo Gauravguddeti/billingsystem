@@ -1085,7 +1085,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         ),
                         h('div',{className:'mb-6'},
                             h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Invoice Items'),
-                            h('div',{className:'overflow-x-auto'},
+                            h('div',{className:'overflow-x-auto',style:{overflowY:'visible'}},
                                 h('table',{className:'w-full border-collapse'},
                                     h('thead',{},h('tr',{className:'gradient-bg text-white'},
                                         h('th',{className:'border border-gray-300 p-3 text-left'},'#'),
@@ -1101,12 +1101,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     )),
                                     h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id,className:'hover:bg-purple-50 transition'},
                                         h('td',{className:'border border-gray-300 p-3 font-semibold'},idx+1),
-                                        h('td',{className:'border border-gray-300 p-3 relative'},
+                                        h('td',{className:'border border-gray-300 p-3',style:{position:'relative'}},
                                             h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
-                                            h('div',{className:'absolute z-[9999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
+                                            h('div',{className:'absolute z-[99999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
                                                 prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,5).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 transition flex justify-between items-center'},
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
                                                         h('span',{className:'font-medium text-gray-800'},p.name),
                                                         h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
                                                     )
