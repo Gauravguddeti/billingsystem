@@ -509,7 +509,77 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             
             useEffect(() => {
                 loadAllData();
+                // Load cached invoice on mount
+                loadCachedInvoice();
             }, []);
+            
+            // Auto-save invoice to localStorage whenever invoice data changes
+            useEffect(() => {
+                if (view === 'invoice' && selectedCategory) {
+                    saveInvoiceToCache();
+                }
+            }, [items, custName, custAddr, custGST, custPhone, invNum, invDate, taxInc, discount, discountAmount, selectedCategory]);
+            
+            const saveInvoiceToCache = () => {
+                try {
+                    const cacheData = {
+                        items,
+                        custName,
+                        custAddr,
+                        custGST,
+                        custPhone,
+                        invNum,
+                        invDate,
+                        taxInc,
+                        discount,
+                        discountAmount,
+                        selectedCategory: selectedCategory ? { id: selectedCategory.id, name: selectedCategory.name } : null,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem('invoiceInProgress_' + user.id, JSON.stringify(cacheData));
+                } catch (err) {
+                    console.error('Error saving to cache:', err);
+                }
+            };
+            
+            const loadCachedInvoice = () => {
+                try {
+                    const cached = localStorage.getItem('invoiceInProgress_' + user.id);
+                    if (cached) {
+                        const data = JSON.parse(cached);
+                        // Only load if cache is less than 24 hours old
+                        if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+                            setItems(data.items || [{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);
+                            setCustName(data.custName || '');
+                            setCustAddr(data.custAddr || '');
+                            setCustGST(data.custGST || '');
+                            setCustPhone(data.custPhone || '');
+                            setInvNum(data.invNum || 'INV-001');
+                            setInvDate(data.invDate || getCurrentDate());
+                            setTaxInc(data.taxInc || false);
+                            setDiscount(data.discount || 0);
+                            setDiscountAmount(data.discountAmount || 0);
+                            if (data.selectedCategory) {
+                                // Will be properly set after categories load
+                                setTimeout(() => {
+                                    const cat = categories.find(c => c.id === data.selectedCategory.id);
+                                    if (cat) setSelectedCategory(cat);
+                                }, 500);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error loading cache:', err);
+                }
+            };
+            
+            const clearInvoiceCache = () => {
+                try {
+                    localStorage.removeItem('invoiceInProgress_' + user.id);
+                } catch (err) {
+                    console.error('Error clearing cache:', err);
+                }
+            };
             
             const loadAllData = async () => {
                 setLoading(true);
@@ -841,6 +911,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
                 
                 await loadAllData();
+                clearInvoiceCache();
                 alert('Invoice saved successfully!');
                 // Stay in invoice view to see the saved bill
             };
@@ -1088,7 +1159,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('h3',{className:'text-xl font-bold gradient-text'},selectedCategory.name)
                                 ),
                                 h('div',{className:'flex gap-4'},
-                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
+                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);clearInvoiceCache()},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
                                     h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
                                     items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate)},className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
                                 )
