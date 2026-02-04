@@ -581,6 +581,44 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
             };
             
+            // Cache utilities for all data
+            const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+            
+            const getCachedData = (key) => {
+                try {
+                    const cached = localStorage.getItem(key + '_' + user.id);
+                    if (cached) {
+                        const data = JSON.parse(cached);
+                        if (Date.now() - data.timestamp < CACHE_DURATION) {
+                            return data.value;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error reading cache:', err);
+                }
+                return null;
+            };
+            
+            const setCachedData = (key, value) => {
+                try {
+                    localStorage.setItem(key + '_' + user.id, JSON.stringify({
+                        value,
+                        timestamp: Date.now()
+                    }));
+                } catch (err) {
+                    console.error('Error writing cache:', err);
+                }
+            };
+            
+            const clearAllCache = () => {
+                try {
+                    const keys = ['profile', 'customers', 'products', 'invoices', 'categories'];
+                    keys.forEach(key => localStorage.removeItem(key + '_' + user.id));
+                } catch (err) {
+                    console.error('Error clearing cache:', err);
+                }
+            };
+            
             const loadAllData = async () => {
                 setLoading(true);
                 try {
@@ -600,6 +638,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             };
             
             const loadProfile = async () => {
+                // Try cache first
+                const cached = getCachedData('profile');
+                if (cached) {
+                    setConfig(cached);
+                }
+                
                 const { data, error } = await supabase
                     .from('user_profiles')
                     .select('*')
@@ -607,7 +651,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     .single();
                 
                 if (data) {
-                    setConfig({
+                    const configData = {
                         name: data.business_name || 'Your Business Name',
                         address: data.business_address || 'Your Address',
                         gstin: data.gstin || '',
@@ -616,9 +660,11 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         bankName: data.bank_name || '',
                         accountNo: data.account_no || '',
                         ifsc: data.ifsc || ''
-                    });
+                    };
+                    setConfig(configData);
+                    setCachedData('profile', configData);
                 } else {
-                    setConfig({
+                    const defaultConfig = {
                         name: 'Your Business Name',
                         address: 'Your Address',
                         gstin: '',
@@ -627,20 +673,38 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         bankName: '',
                         accountNo: '',
                         ifsc: ''
-                    });
+                    };
+                    setConfig(defaultConfig);
+                    setCachedData('profile', defaultConfig);
                 }
             };
             
             const loadCustomers = async () => {
+                // Try cache first
+                const cached = getCachedData('customers');
+                if (cached) {
+                    setCusts(cached);
+                }
+                
                 const { data } = await supabase
                     .from('customers')
                     .select('*')
                     .eq('user_id', user.id)
                     .order('name');
-                if (data) setCusts(data);
+                if (data) {
+                    setCusts(data);
+                    setCachedData('customers', data);
+                }
             };
             
             const loadProducts = async () => {
+                // Try cache first
+                const cached = getCachedData('products');
+                if (cached) {
+                    setStock(cached);
+                    setProds(cached);
+                }
+                
                 const { data } = await supabase
                     .from('product_rates')
                     .select('*')
@@ -649,19 +713,35 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 if (data) {
                     setStock(data);
                     setProds(data);
+                    setCachedData('products', data);
                 }
             };
             
             const loadCategories = async () => {
+                // Try cache first
+                const cached = getCachedData('categories');
+                if (cached) {
+                    setCategories(cached);
+                }
+                
                 const { data } = await supabase
                     .from('categories')
                     .select('*')
                     .eq('user_id', user.id)
                     .order('name');
-                if (data) setCategories(data);
+                if (data) {
+                    setCategories(data);
+                    setCachedData('categories', data);
+                }
             };
             
             const loadInvoices = async () => {
+                // Try cache first
+                const cached = getCachedData('invoices');
+                if (cached) {
+                    setInvs(cached);
+                }
+                
                 const { data } = await supabase
                     .from('invoices')
                     .select('*, categories(id, name)')
@@ -719,6 +799,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         };
                     }));
                     setInvs(transformed);
+                    setCachedData('invoices', transformed);
                 }
             };
             
@@ -753,7 +834,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         ifsc: config.ifsc
                     });
                 
-                if (!error) alert('Settings saved!');
+                if (!error) {
+                    await loadProfile();
+                    alert('Settings saved!');
+                }
             };
             
             const saveCategory = async () => {
