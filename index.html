@@ -932,7 +932,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     className: `flex items-center gap-2 px-4 py-2 rounded-lg transition ${view === viewName ? 'gradient-bg text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`
                 }, icon, ' ', label);
             
-            return h('div',{className:'no-print min-h-screen bg-gray-50'},
+            return h(React.Fragment, null,
+                h('div',{className:'no-print min-h-screen bg-gray-50'},
                 // Top Navigation
                 h('div',{className:'gradient-bg text-white shadow-xl'},
                     h('div',{className:'container mx-auto px-6 py-4'},
@@ -1280,6 +1281,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         h('button',{onClick:()=>setShowChatbot(false),className:'text-white hover:text-gray-200 text-2xl'},'✕')
                     ),
                     h(AIChatbot, {invoices:invs, customers:custs, products:prods, user})
+                )
                 ),
                 
                 // Print Container
