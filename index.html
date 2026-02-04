@@ -868,32 +868,30 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             
             const calcLine = (item) => {
                 const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
-                let baseRate = r - (r * d / 100);
+                let sellingRate = r - (r * d / 100);
                 
                 if(taxInc) {
-                    // Tax bill: rate entered is BASE price (without GST)
-                    // User enters base, we calculate selling price = base * 1.05
-                    const base = baseRate;
-                    const gstAmount = base * 0.05;  // 5% GST total (2.5% CGST + 2.5% SGST)
-                    const sellingPrice = base * 1.05;  // base + 5% GST
+                    // Tax bill: rate entered is SELLING price (with GST)
+                    // Calculate base = selling * 100/105
+                    const base = sellingRate * 100 / 105;
                     return {
                         base: (base * q).toFixed(2),
-                        cgst: ((gstAmount / 2) * q).toFixed(2),
-                        sgst: ((gstAmount / 2) * q).toFixed(2),
-                        tot: (sellingPrice * q).toFixed(2),
+                        cgst: '0.00',
+                        sgst: '0.00',
+                        tot: (base * q).toFixed(2),
                         unitBase: base.toFixed(2),
-                        unitSelling: sellingPrice.toFixed(2)
+                        unitSelling: sellingRate.toFixed(2)
                     };
                 }
                 
                 // Normal bill: No GST calculation
                 return {
-                    base: (baseRate * q).toFixed(2),
+                    base: (sellingRate * q).toFixed(2),
                     cgst: '0.00',
                     sgst: '0.00',
-                    tot: (baseRate * q).toFixed(2),
-                    unitBase: baseRate.toFixed(2),
-                    unitSelling: baseRate.toFixed(2)
+                    tot: (sellingRate * q).toFixed(2),
+                    unitBase: sellingRate.toFixed(2),
+                    unitSelling: sellingRate.toFixed(2)
                 };
             };
             
@@ -1146,7 +1144,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('td',{className:'border border-gray-300 p-3'},
                                             h('div',{className:'flex flex-col gap-1'},
                                                 h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-28 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:taxInc?'Final Price':'Rate'}),
-                                                taxInc&&parseFloat(it.rate)>0&&h('span',{className:'text-xs text-gray-500'},'Base: ₹'+c.unitBase)
+                                                taxInc&&parseFloat(it.rate)>0&&h('span',{className:'text-xs text-purple-600 font-semibold'},'Showing Price: ₹'+c.unitBase)
                                             )
                                         ),
                                         h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.discount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discount:e.target.value}:i)),className:'w-20 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,min:0,max:100})),
@@ -1315,7 +1313,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('table',{className:'invoice-table'},
                         h('thead',{},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'25%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),h('th',{style:{width:'7%'}},'Qty'),h('th',{style:{width:'7%'}},'Unit'),h('th',{style:{width:'10%'}},'Free'),h('th',{style:{width:'11%',textAlign:'right'}},'Rate'),h('th',{style:{width:'12%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
                         h('tbody',{},
-                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+(taxInc?c.unitSelling:it.rate)),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}).filter(Boolean),
+                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+c.unitBase),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}).filter(Boolean),
                             h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'Discount ('+discount+'%):'),h('td',{colSpan:2,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
