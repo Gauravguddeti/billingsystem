@@ -104,6 +104,22 @@
         
         const getCurrentDate = () => new Date().toISOString().split('T')[0];
         
+        // Helper to set document title for PDF filename
+        const printWithFilename = (customerName, invoiceNumber, date) => {
+            const originalTitle = document.title;
+            // Clean customer name for filename (remove special characters)
+            const cleanName = customerName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            const cleanDate = date.replace(/[^0-9-]/g, '');
+            document.title = `${invoiceNumber}_${cleanName}_${cleanDate}`;
+            
+            window.print();
+            
+            // Restore original title after a short delay
+            setTimeout(() => {
+                document.title = originalTitle;
+            }, 100);
+        };
+        
         // Auth Component
         const AuthPage = ({ onAuthSuccess }) => {
             const [isLogin, setIsLogin] = useState(true);
@@ -852,29 +868,32 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             
             const calcLine = (item) => {
                 const r = parseFloat(item.rate)||0, q = parseFloat(item.qty)||0, d = parseFloat(item.discount)||0;
-                let finalRate = r - (r * d / 100);
+                let baseRate = r - (r * d / 100);
                 
                 if(taxInc) {
-                    // Tax included: rate entered is final price with GST
-                    // Calculate backwards: base = rate * 100/105
-                    const base = finalRate * 100 / 105;
-                    const gst = finalRate - base;
+                    // Tax bill: rate entered is BASE price (without GST)
+                    // User enters base, we calculate selling price = base * 1.05
+                    const base = baseRate;
+                    const gstAmount = base * 0.05;  // 5% GST total (2.5% CGST + 2.5% SGST)
+                    const sellingPrice = base * 1.05;  // base + 5% GST
                     return {
                         base: (base * q).toFixed(2),
-                        cgst: ((gst / 2) * q).toFixed(2),
-                        sgst: ((gst / 2) * q).toFixed(2),
-                        tot: (finalRate * q).toFixed(2),
-                        unitBase: base.toFixed(2)
+                        cgst: ((gstAmount / 2) * q).toFixed(2),
+                        sgst: ((gstAmount / 2) * q).toFixed(2),
+                        tot: (sellingPrice * q).toFixed(2),
+                        unitBase: base.toFixed(2),
+                        unitSelling: sellingPrice.toFixed(2)
                     };
                 }
                 
                 // Normal bill: No GST calculation
                 return {
-                    base: (finalRate * q).toFixed(2),
+                    base: (baseRate * q).toFixed(2),
                     cgst: '0.00',
                     sgst: '0.00',
-                    tot: (finalRate * q).toFixed(2),
-                    unitBase: finalRate.toFixed(2)
+                    tot: (baseRate * q).toFixed(2),
+                    unitBase: baseRate.toFixed(2),
+                    unitSelling: baseRate.toFixed(2)
                 };
             };
             
@@ -894,7 +913,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 let cgstFinal, sgstFinal, gt;
                 if(taxInc) {
-                    // Tax bill: GST already calculated in items
+                    // Tax bill: Recalculate GST on discounted amount
                     cgstFinal = (afterDisc * 0.025);
                     sgstFinal = (afterDisc * 0.025);
                     gt = afterDisc + cgstFinal + sgstFinal;
@@ -1055,7 +1074,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 h('div',{className:'flex gap-4'},
                                     h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}]);setDiscount(0)},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🆕 New'),
                                     h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
-                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}window.print()},className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate)},className:'bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'🖨 Print')
                                 )
                             ),
                             h('div',{className:'flex items-center gap-3'},
@@ -1225,7 +1244,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     ),
                                     h('td',{className:'border border-gray-300 p-4'},
                                         h('div',{className:'flex gap-2 justify-center flex-wrap'},
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>window.print(),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>printWithFilename(inv.customer.name,inv.invoiceNumber,inv.date),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
                                             h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setSelectedCategory(inv.category);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'✏️ Edit'),
                                             h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
                                             h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
@@ -1296,7 +1315,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('table',{className:'invoice-table'},
                         h('thead',{},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'25%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),h('th',{style:{width:'7%'}},'Qty'),h('th',{style:{width:'7%'}},'Unit'),h('th',{style:{width:'10%'}},'Free'),h('th',{style:{width:'11%',textAlign:'right'}},'Rate'),h('th',{style:{width:'12%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
                         h('tbody',{},
-                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+(taxInc?c.unitBase:it.rate)),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}).filter(Boolean),
+                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'';const discText=(it.discount&&parseFloat(it.discount)>0)?` (${it.discount}% off)`:'';return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name+discText),h('td',{},it.hsn),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+(taxInc?c.unitSelling:it.rate)),h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}).filter(Boolean),
                             h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right'}},'Discount ('+discount+'%):'),h('td',{colSpan:2,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
                             parseFloat(discount)>0&&h('tr',{},h('td',{colSpan:7,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:2,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
