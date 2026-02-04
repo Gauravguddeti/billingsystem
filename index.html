@@ -879,15 +879,14 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             };
             
             const calcTotals = () => {
-                let sub=0,cg=0,sg=0,tq=0,ti=items.filter(i=>i.name).length;
-                items.forEach(i=>{
-                    if(i.name){
-                        const c=calcLine(i);
-                        sub+=parseFloat(c.base);
-                        cg+=parseFloat(c.cgst);
-                        sg+=parseFloat(c.sgst);
-                        tq+=parseFloat(i.qty)||0;
-                    }
+                const validItems = items.filter(i=>i.name && i.qty && i.rate);
+                let sub=0,cg=0,sg=0,tq=0,ti=validItems.length;
+                validItems.forEach(i=>{
+                    const c=calcLine(i);
+                    sub+=parseFloat(c.base);
+                    cg+=parseFloat(c.cgst);
+                    sg+=parseFloat(c.sgst);
+                    tq+=parseFloat(i.qty)||0;
                 });
                 
                 const discAmt = (sub * (parseFloat(discount)||0) / 100);
