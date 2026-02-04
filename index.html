@@ -1104,8 +1104,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('td',{className:'border border-gray-300 p-3 relative'},
                                             h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
-                                            h('div',{className:'absolute z-[9999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl max-h-64 overflow-y-auto top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
-                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,10).map((p,i)=>
+                                            h('div',{className:'absolute z-[9999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
+                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,5).map((p,i)=>
                                                     h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 transition flex justify-between items-center'},
                                                         h('span',{className:'font-medium text-gray-800'},p.name),
                                                         h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
@@ -1282,7 +1282,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 ),
                 
                 // Print Container
-                h('div',{className:'print-container'},
+                items.filter(i=>i.name).length>0&&h('div',{className:'print-container'},
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
                             h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config.name),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config.address),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+config.gstin),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+config.phone),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+config.email)),
