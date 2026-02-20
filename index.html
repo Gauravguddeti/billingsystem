@@ -607,6 +607,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [prods, setProds] = useState([]);
             const [invs, setInvs] = useState([]);
             const [stock, setStock] = useState([]);
+            const [itemDropdown, setItemDropdown] = useState({id:null,top:0,left:0,width:300});
             const [showStockForm, setShowStockForm] = useState(false);
             const [stockFormData, setStockFormData] = useState({name:'',rate:0});
             const [editingStock, setEditingStock] = useState(null);
