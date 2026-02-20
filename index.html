@@ -857,7 +857,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 const { data } = await supabase
                     .from('invoices')
-                    .select('*, categories(id, name)')
+                    .select('*, categories(*)')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
                 
@@ -1075,9 +1075,11 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         quantity: parseFloat(it.qty),
                         unit: it.unit,
                         rate: parseFloat(it.rate),
+                        mrp: parseFloat(it.mrp) || 0,
                         free_qty: parseFloat(it.freeQty) || 0,
                         free_unit: it.freeUnit,
                         discount: parseFloat(it.discount) || 0,
+                        discount_amount: parseFloat(it.discountAmount) || 0,
                         base_amount: parseFloat(c.base),
                         cgst: parseFloat(c.cgst),
                         sgst: parseFloat(c.sgst),
@@ -1102,15 +1104,24 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         await supabase.from('product_rates').insert({
                             user_id: user.id,
                             name: it.name,
-                            rate: parseFloat(it.rate) || 0
+                            rate: parseFloat(it.rate) || 0,
+                            mrp: parseFloat(it.mrp) || 0,
+                            hsn: it.hsn || ''
                         });
                     }
                 }
                 
                 await loadAllData();
                 clearInvoiceCache();
+                setInvDate(getCurrentDate());
+                setCustName('');
+                setCustAddr('');
+                setCustGST('');
+                setCustPhone('');
+                setItems([{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);
+                setDiscount(0);
+                setDiscountAmount(0);
                 alert('Invoice saved successfully!');
-                // Stay in invoice view to see the saved bill
             };
             
             const updatePaymentStatus = async (invoice, status, amountPaid, notes) => {
@@ -1395,6 +1406,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('thead',{},h('tr',{className:'gradient-bg text-white'},
                                         h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'#'),
                                         h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Item'),
+                                        h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'HSN'),
                                         selectedCategory?.has_mrp&&h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'MRP'),
                                         h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Qty'),
                                         h('th',{className:'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm'},'Unit'),
@@ -1407,17 +1419,18 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id,className:'hover:bg-purple-50 transition'},
                                         h('td',{className:'border border-gray-300 p-3 font-semibold'},idx+1),
                                         h('td',{className:'border border-gray-300 p-3',style:{position:'relative'}},
-                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
+                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||i.hsn}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
                                             h('div',{className:'absolute z-[99999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
                                                 prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,5).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
+                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
                                                         h('span',{className:'font-medium text-gray-800'},p.name),
                                                         h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
                                                     )
                                                 )
                                             )
                                         ),
+                                        h('td',{className:'border border-gray-300 p-3'},h('input',{type:'text',value:it.hsn||'',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,hsn:e.target.value}:i)),className:'w-24 px-2 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'HSN'})),
                                         selectedCategory?.has_mrp&&h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.mrp||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,mrp:e.target.value}:i)),className:'w-24 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:'MRP'})),
                                         h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.qty,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,qty:e.target.value}:i)),className:'w-24 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
                                         h('td',{className:'border border-gray-300 p-3'},h('select',{value:it.unit,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,unit:e.target.value}:i)),className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:'Pcs'},'Pcs'),h('option',{value:'Dozen'},'Dozen'),h('option',{value:'Gross'},'Gross'),h('option',{value:'Kg'},'Kg'),h('option',{value:'Ltr'},'Ltr'))),
@@ -1481,17 +1494,19 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     )):view==='stock'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
                         h('div',{className:'flex justify-between mb-6'},
                             h('h2',{className:'text-3xl font-bold gradient-text'},'Product Rates'),
-                            h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Product')
+                            h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0,mrp:0,hsn:''})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Product')
                         ),
                         showStockForm&&h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200'},
                             h('h3',{className:'font-bold mb-4 text-lg text-gray-800'},'Add New Product'),
-                            h('div',{className:'grid grid-cols-2 gap-4 mb-4'},
+                            h('div',{className:'grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'},
                                 h('input',{type:'text',placeholder:'Product Name',value:stockFormData.name,onChange:e=>setStockFormData({...stockFormData,name:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
-                                h('input',{type:'number',placeholder:'Rate',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01})
+                                h('input',{type:'number',placeholder:'Rate (₹)',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),
+                                h('input',{type:'number',placeholder:'MRP (₹)',value:stockFormData.mrp||0,onChange:e=>setStockFormData({...stockFormData,mrp:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),
+                                h('input',{type:'text',placeholder:'HSN Code',value:stockFormData.hsn||'',onChange:e=>setStockFormData({...stockFormData,hsn:e.target.value}),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})
                             ),
                             h('div',{className:'flex gap-3'},
-                                h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0})}}},className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Save'),
-                                h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
+                                h('button',{onClick:async()=>{if(stockFormData.name){const {error}=await supabase.from('product_rates').upsert({user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0,mrp:parseFloat(stockFormData.mrp)||0,hsn:stockFormData.hsn||''},{onConflict:'user_id,name'});if(!error){await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0,mrp:0,hsn:''})}}},className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Save'),
+                                h('button',{onClick:()=>{setShowStockForm(false);setStockFormData({name:'',rate:0,mrp:0,hsn:''})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
                             )
                         ),
                         stock.length===0?h('p',{className:'text-center py-16 text-gray-500 text-lg'},'No products added yet'):
@@ -1499,16 +1514,20 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             stock.map((s,i)=>h('div',{key:i,className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl card-hover border-2 border-gray-100'},
                                 editingStock===i?
                                 h('div',{className:'space-y-3'},
-                                    h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
-                                    h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg text-right focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),
+                                    h('input',{type:'text',value:s.name,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,name:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'Product Name'}),
+                                    h('input',{type:'number',value:s.rate||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,rate:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:'Rate (₹)'}),
+                                    h('input',{type:'number',value:s.mrp||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,mrp:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:'MRP (₹)'}),
+                                    h('input',{type:'text',value:s.hsn||'',onChange:e=>{const ns=stock.map((st,idx)=>idx===i?{...st,hsn:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'HSN Code'}),
                                     h('div',{className:'flex gap-2'},
-                                        h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✓'),
+                                        h('button',{onClick:async()=>{await supabase.from('product_rates').update({name:stock[i].name,rate:parseFloat(stock[i].rate)||0,mrp:parseFloat(stock[i].mrp)||0,hsn:stock[i].hsn||''}).eq('id',s.id);await loadProducts();setEditingStock(null)},className:'flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✓'),
                                         h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✕')
                                     )
                                 ):
                                 h('div',{},
                                     h('h3',{className:'text-xl font-bold text-gray-800 mb-2'},s.name),
-                                    h('p',{className:'text-3xl font-bold text-purple-600 mb-4'},'₹'+(s.rate||0)),
+                                    h('p',{className:'text-2xl font-bold text-purple-600 mb-1'},'Rate: ₹'+(s.rate||0)),
+                                    s.mrp>0&&h('p',{className:'text-sm text-gray-500 mb-1'},'MRP: ₹'+(s.mrp||0)),
+                                    s.hsn&&h('p',{className:'text-xs text-gray-400 mb-3'},'HSN: '+s.hsn),
                                     h('div',{className:'flex gap-2'},
                                         h('button',{onClick:()=>setEditingStock(i),className:'flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Edit'),
                                         h('button',{onClick:async()=>{if(confirm('Delete '+s.name+'?')){await supabase.from('product_rates').delete().eq('id',s.id);await loadProducts()}},className:'flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Delete')
