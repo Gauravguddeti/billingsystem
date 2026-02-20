@@ -585,17 +585,20 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
         
         // Main Billing App
         const BillingApp = ({ user, onLogout }) => {
-            const [view, setView] = useState('dashboard');
+            // Restore last UI state (view, filters, search) across refreshes
+            const _savedUI = (() => { try { return JSON.parse(localStorage.getItem('uiState_' + user.id)) || {}; } catch(e) { return {}; } })();
+
+            const [view, setView] = useState(_savedUI.view || 'dashboard');
             const [loading, setLoading] = useState(true);
             const [invNum, setInvNum] = useState('INV-001');
             const [invDate, setInvDate] = useState(getCurrentDate());
-            const [taxInc, setTaxInc] = useState(false);
+            const [taxInc, setTaxInc] = useState(_savedUI.taxInc || false);
             const [config, setConfig] = useState(null);
-            const [fromDate, setFromDate] = useState('');
-            const [toDate, setToDate] = useState('');
+            const [fromDate, setFromDate] = useState(_savedUI.fromDate || '');
+            const [toDate, setToDate] = useState(_savedUI.toDate || '');
             const [discount, setDiscount] = useState(0);
             const [discountAmount, setDiscountAmount] = useState(0);
-            const [searchQuery, setSearchQuery] = useState('');
+            const [searchQuery, setSearchQuery] = useState(_savedUI.searchQuery || '');
             const [showChatbot, setShowChatbot] = useState(false);
             
             const [custName, setCustName] = useState('');
@@ -612,7 +615,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [showStockForm, setShowStockForm] = useState(false);
             const [stockFormData, setStockFormData] = useState({name:'',rate:0,mrp:0,hsn:'',category_id:''});
             const [editingStock, setEditingStock] = useState(null);
-            const [stockCategoryFilter, setStockCategoryFilter] = useState('all');
+            const [stockCategoryFilter, setStockCategoryFilter] = useState(_savedUI.stockCategoryFilter || 'all');
             const [paymentModal, setPaymentModal] = useState(null);
             
             // Category state
@@ -621,7 +624,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [showCategoryForm, setShowCategoryForm] = useState(false);
             const [categoryFormData, setCategoryFormData] = useState({name:'',description:'',default_hsn:'33074100',has_mrp:false});
             const [editingCategory, setEditingCategory] = useState(null);
-            const [categoryFilter, setCategoryFilter] = useState('');
+            const [categoryFilter, setCategoryFilter] = useState(_savedUI.categoryFilter || '');
             
             // Expert cache — in-memory layer (survives re-renders, cleared on logout)
             const memCacheRef = useRef({});
@@ -639,6 +642,16 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     saveInvoiceToCache();
                 }
             }, [items, custName, custAddr, custGST, custPhone, invNum, invDate, taxInc, discount, discountAmount, selectedCategory]);
+
+            // Persist UI state to localStorage on every relevant change
+            // so refreshing returns the user to the exact same view + filters
+            useEffect(() => {
+                try {
+                    localStorage.setItem('uiState_' + user.id, JSON.stringify({
+                        view, searchQuery, fromDate, toDate, taxInc, stockCategoryFilter, categoryFilter
+                    }));
+                } catch(e) {}
+            }, [view, searchQuery, fromDate, toDate, taxInc, stockCategoryFilter, categoryFilter]);
 
             // Background revalidation on tab focus (like Google Docs / VS Code)
             // When the user switches back to this tab, silently refresh stale data
@@ -1281,7 +1294,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             h('div',{className:'flex items-center gap-2 md:gap-4'},
                                 h('span',{className:'hidden md:inline text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full truncate max-w-[150px]'}, user.email),
                                 h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 p-2 md:px-4 md:py-2 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'🤖 AI'),h('span',{className:'md:hidden'},'🤖')),
-                                h('button',{onClick:onLogout,className:'bg-red-500 hover:bg-red-600 px-2 py-2 md:px-4 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'Logout'),h('span',{className:'md:hidden'},'🚪'))
+                                h('button',{onClick:()=>{try{localStorage.removeItem('uiState_'+user.id);}catch(e){}onLogout();},className:'bg-red-500 hover:bg-red-600 px-2 py-2 md:px-4 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'Logout'),h('span',{className:'md:hidden'},'🚪'))
                             )
                         )
                     )
