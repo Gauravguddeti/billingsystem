@@ -1419,16 +1419,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('tbody',{},items.map((it,idx)=>{const c=calcLine(it);return h('tr',{key:it.id,className:'hover:bg-purple-50 transition'},
                                         h('td',{className:'border border-gray-300 p-3 font-semibold'},idx+1),
                                         h('td',{className:'border border-gray-300 p-3',style:{position:'relative'}},
-                                            h('input',{type:'text',value:it.name,onChange:e=>{const v=e.target.value;setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||i.hsn}:i))}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}),
-                                            it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
-                                            h('div',{className:'absolute z-[99999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
-                                                prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,5).map((p,i)=>
-                                                    h('div',{key:i,onMouseDown:e=>{e.preventDefault();setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im))},className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
-                                                        h('span',{className:'font-medium text-gray-800'},p.name),
-                                                        h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
-                                                    )
-                                                )
-                                            )
+                                            h('input',{type:'text',value:it.name,onBlur:()=>setTimeout(()=>setItemDropdown({id:null,top:0,left:0,width:300}),150),onChange:e=>{const v=e.target.value;const rect=e.target.getBoundingClientRect();setItemDropdown({id:it.id,top:rect.bottom+4,left:rect.left,width:Math.max(rect.width,320)});setItems(items.map(i=>i.id===it.id?{...i,name:v}:i));const p=prods.find(x=>x.name===v);if(p){setItems(items.map(i=>i.id===it.id?{...i,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||i.hsn}:i));setItemDropdown({id:null,top:0,left:0,width:300})}},className:'w-full px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})
                                         ),
                                         h('td',{className:'border border-gray-300 p-3'},h('input',{type:'text',value:it.hsn||'',onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,hsn:e.target.value}:i)),className:'w-24 px-2 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'HSN'})),
                                         selectedCategory?.has_mrp&&h('td',{className:'border border-gray-300 p-3'},h('input',{type:'number',value:it.mrp||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,mrp:e.target.value}:i)),className:'w-24 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:'MRP'})),
@@ -1463,7 +1454,16 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     )}))
                                 )
                             ),
-                            h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]),className:'mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Item')
+                            h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]),className:'mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Item'),
+                            itemDropdown.id&&prods.filter(p=>p.name.toLowerCase().includes((items.find(i=>i.id===itemDropdown.id)||{}).name||''.toLowerCase())).length>0&&
+                            h('div',{style:{position:'fixed',top:itemDropdown.top,left:itemDropdown.left,width:itemDropdown.width,zIndex:999999,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'},className:'bg-white border-2 border-purple-400 rounded-lg overflow-hidden'},
+                                prods.filter(p=>p.name.toLowerCase().includes(((items.find(i=>i.id===itemDropdown.id)||{}).name||'').toLowerCase())).slice(0,6).map((p,i)=>
+                                    h('div',{key:i,onMouseDown:e=>{e.preventDefault();setItems(items.map(im=>im.id===itemDropdown.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im));setItemDropdown({id:null,top:0,left:0,width:300})},className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
+                                        h('span',{className:'font-medium text-gray-800'},p.name),
+                                        h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
+                                    )
+                                )
+                            )
                         ),
                         h('div',{className:'grid grid-cols-2 gap-6'},
                             h('div',{className:'p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl'},
