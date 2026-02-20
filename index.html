@@ -1423,7 +1423,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                             it.name&&!prods.find(p=>p.name===it.name)&&prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).length>0&&
                                             h('div',{className:'absolute z-[99999] w-96 bg-white border-2 border-purple-400 rounded-lg shadow-2xl top-full left-0 mt-1',style:{boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}},
                                                 prods.filter(p=>p.name.toLowerCase().includes(it.name.toLowerCase())).slice(0,5).map((p,i)=>
-                                                    h('div',{key:i,onClick:()=>setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im)),className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
+                                                    h('div',{key:i,onMouseDown:e=>{e.preventDefault();setItems(items.map(im=>im.id===it.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im))},className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
                                                         h('span',{className:'font-medium text-gray-800'},p.name),
                                                         h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
                                                     )
