@@ -20,7 +20,7 @@ A modern, cloud-based GST billing system with multi-user support, automatic data
 
 **This version works completely offline with browser storage:**
 
-1. Open `index.html` in your browser
+1. Open `https://billingsystem1.vercel.app` in your browser
 2. Start creating invoices immediately
 3. Data saved in browser localStorage
 4. No setup required!
