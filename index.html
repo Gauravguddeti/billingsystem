@@ -295,13 +295,13 @@
             }
         }
 
-        window.supabase = {
+        window.neonDB = {
             from: (table) => new QueryBuilder(table),
             auth: {
                 _notify: [],
                 onAuthStateChange: (cb) => {
-                    window.supabase.auth._notify.push(cb);
-                    return { data: { subscription: { unsubscribe: () => { window.supabase.auth._notify = window.supabase.auth._notify.filter(f => f !== cb); } } } };
+                    window.neonDB.auth._notify.push(cb);
+                    return { data: { subscription: { unsubscribe: () => { window.neonDB.auth._notify = window.neonDB.auth._notify.filter(f => f !== cb); } } } };
                 },
                 getSession: async () => {
                     const sessionStr = localStorage.getItem('neon_session');
@@ -320,7 +320,7 @@
                     const data = await res.json();
                     if (!data.error && data.data?.session) {
                         localStorage.setItem('neon_session', JSON.stringify(data.data.session));
-                        window.supabase.auth._notify.forEach(cb => cb('SIGNED_IN', data.data.session));
+                        window.neonDB.auth._notify.forEach(cb => cb('SIGNED_IN', data.data.session));
                     }
                     return data;
                 },
@@ -334,11 +334,11 @@
                 },
                 signOut: async () => {
                     localStorage.removeItem('neon_session');
-                    window.supabase.auth._notify.forEach(cb => cb('SIGNED_OUT', null));
+                    window.neonDB.auth._notify.forEach(cb => cb('SIGNED_OUT', null));
                     return { error: null };
                 },
                 signInWithOAuth: async () => {
-                    return { error: { message: 'OAuth not supported on this proxy' } };
+                    return { error: { message: 'Google login not supported. Please use email & password.' } };
                 },
                 resetPasswordForEmail: async (email, opts) => {
                     const res = await fetch(window._NEON_API, {
@@ -360,7 +360,8 @@
                 }
             }
         };
-        const supabase = window.supabase;
+        // db is the NeonDB proxy client (was previously called supabase)
+        const supabase = window.neonDB;
         
         // Helper functions
         const numberToWords = (num) => {
@@ -1201,12 +1202,13 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const loadAllData = async () => {
                 setLoading(true);
                 try {
+                    // Load categories first so invoices can merge category names client-side
+                    await loadCategories();
                     await Promise.all([
                         loadProfile(),
                         loadCustomers(),
                         loadProducts(),
-                        loadInvoices(),
-                        loadCategories()
+                        loadInvoices()
                     ]);
                     await generateNextInvoiceNumber();
                 } catch (err) {
@@ -1269,13 +1271,15 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
 
             // loadInvoices — fixed N+1: was 1 query per invoice for items (e.g. 50 invoices = 51 queries)
             // Now: 2 queries total (invoices + ALL their items batched), grouped in JS
+            // NOTE: Using select('*') only — categories(*) is Supabase join syntax not valid in NeonDB proxy.
+            // Category data is merged client-side using category_id.
             const loadInvoices = () => _dedupe('invoices', async () => {
                 const cached = getCachedData('invoices');
                 if (cached) setInvs(cached);
 
                 const { data: invData } = await supabase
                     .from('invoices')
-                    .select('*, categories(*)')
+                    .select('*')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
 
@@ -1291,6 +1295,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         .in('invoice_id', invoiceIds);
                     allItems = itemsData || [];
                 }
+
+                // Merge category data from cache (categories load in parallel)
+                const catCache = getCachedData('categories') || [];
 
                 // Group items by invoice_id for O(1) lookup
                 const itemsByInvoice = {};
@@ -1319,7 +1326,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     amount_paid: inv.amount_paid || 0,
                     payment_date: inv.payment_date,
                     payment_notes: inv.payment_notes,
-                    category: inv.categories,
+                    category: catCache.find(c => c.id === inv.category_id) || null,
                     category_id: inv.category_id,
                     id: inv.id
                 }));
@@ -1383,7 +1390,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         })
                         .eq('id', editingCategory.id);
                     if (error) {
-                        alert('Error updating category: ' + error.message + '\n\nPlease run categories-schema.sql in Supabase first!');
+                        alert('Error updating category: ' + error.message);
                         console.error('Category update error:', error);
                     } else {
                         await loadCategories();
@@ -1403,7 +1410,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             has_mrp: categoryFormData.has_mrp
                         });
                     if (error) {
-                        alert('Error adding category: ' + error.message + '\n\nPlease run categories-schema.sql in Supabase first!');
+                        alert('Error adding category: ' + error.message);
                         console.error('Category insert error:', error);
                     } else {
                         await loadCategories();
