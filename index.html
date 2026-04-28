@@ -18,7 +18,7 @@
             .no-print { display: none !important; }
             body {
                 margin: 0;
-                padding: 10mm 12mm;
+                padding: 8mm 12mm;
                 font-size: 12px;
                 background: white;
                 -webkit-print-color-adjust: exact;
@@ -62,27 +62,26 @@
             .small-invoice {
                 display: flex !important;
                 flex-direction: column !important;
-                min-height: 130mm;
-                max-height: 142mm;
+                min-height: 116mm;
+                max-height: 126mm;
                 box-sizing: border-box;
                 overflow: hidden;
                 border-bottom: 1.5px dashed #888;
-                padding-bottom: 4mm;
-                margin-bottom: 3mm;
+                padding-bottom: 3mm;
+                margin-bottom: 2mm;
                 page-break-after: always;
             }
-            .small-invoice .print-footer  { margin-top: auto !important; padding-top: 6px !important; }
-            .small-invoice h1 { font-size: 20px !important; margin: 0 0 4px 0 !important; }
-            .small-invoice h2 { font-size: 17px !important; margin: 0 0 4px 0 !important; }
-            .small-invoice h3 { font-size: 13px !important; margin: 0 0 3px 0 !important; }
-            .small-invoice p  { font-size: 11px !important; margin: 2px 0 !important; line-height: 1.35 !important; }
-            .small-invoice .print-header  { padding-bottom: 6px !important; margin-bottom: 8px !important; }
-            .small-invoice .invoice-table { font-size: 11px !important; margin: 6px 0 !important; }
+            .small-invoice .print-footer  { margin-top: auto !important; padding-top: 5px !important; }
+            .small-invoice h1 { font-size: 17px !important; margin: 0 0 3px 0 !important; }
+            .small-invoice h2 { font-size: 15px !important; margin: 0 0 3px 0 !important; }
+            .small-invoice h3 { font-size: 12px !important; margin: 0 0 2px 0 !important; }
+            .small-invoice p  { font-size: 10px !important; margin: 1px 0 !important; line-height: 1.3 !important; }
+            .small-invoice .print-header  { padding-bottom: 5px !important; margin-bottom: 6px !important; }
+            .small-invoice .invoice-table { font-size: 10px !important; margin: 5px 0 !important; }
             .small-invoice .invoice-table th,
-            .small-invoice .invoice-table td { padding: 4px 6px !important; }
-            .small-invoice .print-footer .signature-gap { height: 32px !important; }
-            /* Kill inline marginBottom values inside small-invoice */
-            .small-invoice div[style] { margin-bottom: 6px !important; }
+            .small-invoice .invoice-table td { padding: 3px 5px !important; }
+            .small-invoice .print-footer .signature-gap { height: 24px !important; }
+            .small-invoice div[style] { margin-bottom: 5px !important; }
         }
 
         @media screen { .print-container { display: none; } }
