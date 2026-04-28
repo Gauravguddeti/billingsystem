@@ -2,6 +2,7 @@
 import { Pool } from '@neondatabase/serverless';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -71,8 +72,60 @@ export default async function handler(req, res) {
         }
 
         if (action === 'resetPassword') {
-            // In a real app, send an email. For this shim, we just acknowledge.
-            // The prompt says "Handles auth actions: resetPassword"
+            const { email, opts } = payload;
+            let user;
+            try {
+                const { rows } = await pool.query(`SELECT * FROM auth.users WHERE email = $1`, [email]);
+                user = rows[0];
+            } catch (e) {
+                const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+                user = rows[0];
+            }
+
+            if (!user) {
+                // Return success even if user not found to prevent email enumeration
+                return res.status(200).json({ data: { message: 'Password reset email sent' }, error: null });
+            }
+
+            // Generate a short-lived reset token
+            const token = jwt.sign({ sub: user.id, email: user.email, role: 'authenticated' }, process.env.JWT_SECRET, { expiresIn: '15m' });
+            
+            const resetLink = `${opts?.redirectTo || 'http://localhost:3000/?reset=1'}&token=${token}`;
+            
+            // Set up Nodemailer
+            const transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                port: process.env.SMTP_PORT || 465,
+                secure: true,
+                auth: {
+                    user: process.env.GMAIL_EMAIL || process.env.SMTP_USER,
+                    pass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS
+                }
+            });
+
+            try {
+                await transporter.sendMail({
+                    from: `"Smart GST Billing" <${process.env.GMAIL_EMAIL || process.env.SMTP_USER}>`,
+                    to: email,
+                    subject: 'Reset Your Password',
+                    text: `You requested a password reset. Click this link to set a new password: ${resetLink}`,
+                    html: `
+                        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                            <h2 style="color: #333;">Password Reset Request</h2>
+                            <p>You recently requested to reset your password for your Smart GST Billing account.</p>
+                            <p>Click the button below to set a new password. This link will expire in 15 minutes.</p>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${resetLink}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+                            </div>
+                            <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                        </div>
+                    `
+                });
+            } catch (err) {
+                console.error('Email send error:', err);
+                return res.status(500).json({ error: { message: 'Failed to send reset email' }, data: null });
+            }
+
             return res.status(200).json({ data: { message: 'Password reset email sent' }, error: null });
         }
 

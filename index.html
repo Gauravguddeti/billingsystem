@@ -1994,6 +1994,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('reset') === '1') {
                     setResetToken(true);
+                    const token = urlParams.get('token');
+                    if (token) {
+                        localStorage.setItem('neon_session', JSON.stringify({ access_token: token }));
+                    }
                 }
                 
                 supabase.auth.getSession().then(({ data: { session } }) => {
