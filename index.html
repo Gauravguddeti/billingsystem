@@ -460,8 +460,9 @@
                 if (error) setError(error.message);
             };
             
-            const [otpSent, setOtpSent] = useState(false);
+            const [resetStep, setResetStep] = useState('email'); // 'email', 'otp', 'password'
             const [otpToken, setOtpToken] = useState('');
+            const [verifiedToken, setVerifiedToken] = useState('');
             const [otp, setOtp] = useState('');
             const [newPassword, setNewPassword] = useState('');
             const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -480,7 +481,7 @@
                     const json = await res.json();
                     if (json.error) throw new Error(json.error.message);
                     setOtpToken(json.data.otpToken);
-                    setOtpSent(true);
+                    setResetStep('otp');
                     setMsg('OTP sent! Please check your email.');
                 } catch (err) {
                     setError(err.message);
@@ -490,6 +491,32 @@
             };
             
             const handleVerifyOTP = async (e) => {
+                e.preventDefault();
+                setError('');
+                setMsg('');
+                setLoading(true);
+                try {
+                    const res = await fetch(window._NEON_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            action: 'verifyOTP', 
+                            payload: { email, otp, otpToken } 
+                        })
+                    });
+                    const json = await res.json();
+                    if (json.error) throw new Error(json.error.message);
+                    setVerifiedToken(json.data.verifiedToken);
+                    setResetStep('password');
+                    setMsg('OTP Verified! Please enter your new password.');
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleUpdatePassword = async (e) => {
                 e.preventDefault();
                 setError('');
                 setMsg('');
@@ -504,8 +531,8 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
-                            action: 'verifyOTPAndUpdatePassword', 
-                            payload: { email, otp, otpToken, newPassword } 
+                            action: 'updatePasswordWithToken', 
+                            payload: { verifiedToken, newPassword } 
                         })
                     });
                     const json = await res.json();
@@ -513,7 +540,7 @@
                     setMsg('Password updated successfully! You can now log in.');
                     setTimeout(() => {
                         setShowForgotPassword(false);
-                        setOtpSent(false);
+                        setResetStep('email');
                         setOtp('');
                         setNewPassword('');
                         setConfirmNewPassword('');
@@ -536,8 +563,8 @@
                         ),
                         error && h('div', { className: 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm' }, error),
                         msg && h('div', { className: 'bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm' }, msg),
-                        h('form', { onSubmit: otpSent ? handleVerifyOTP : handleResetPassword, className: 'space-y-4' },
-                            !otpSent ? h('div', {},
+                        h('form', { onSubmit: resetStep === 'email' ? handleResetPassword : (resetStep === 'otp' ? handleVerifyOTP : handleUpdatePassword), className: 'space-y-4' },
+                            resetStep === 'email' && h('div', {},
                                 h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
                                 h('input', {
                                     type: 'email',
@@ -547,7 +574,8 @@
                                     className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
                                     placeholder: 'your@email.com'
                                 })
-                            ) : h('div', { className: 'space-y-4' },
+                            ),
+                            resetStep === 'otp' && h('div', { className: 'space-y-4' },
                                 h('div', {},
                                     h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Enter 6-digit OTP'),
                                     h('input', {
@@ -559,7 +587,9 @@
                                         className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-center tracking-widest font-bold',
                                         placeholder: '------'
                                     })
-                                ),
+                                )
+                            ),
+                            resetStep === 'password' && h('div', { className: 'space-y-4' },
                                 h('div', {},
                                     h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'New Password'),
                                     h('input', {
@@ -589,11 +619,11 @@
                                 type: 'submit',
                                 disabled: loading,
                                 className: 'w-full gradient-bg text-white py-3 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium text-lg'
-                            }, loading ? 'Processing...' : (otpSent ? 'Update Password' : 'Send OTP')),
+                            }, loading ? 'Processing...' : (resetStep === 'email' ? 'Send OTP' : (resetStep === 'otp' ? 'Verify OTP' : 'Update Password'))),
                             h('div', { className: 'text-center mt-6' },
                                 h('button', {
                                     type: 'button',
-                                    onClick: () => { setShowForgotPassword(false); setOtpSent(false); setError(''); setMsg(''); },
+                                    onClick: () => { setShowForgotPassword(false); setResetStep('email'); setError(''); setMsg(''); },
                                     className: 'text-purple-600 hover:text-purple-700 text-sm font-medium'
                                 }, 'Back to Login')
                             )

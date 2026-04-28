@@ -130,10 +130,10 @@ export default async function handler(req, res) {
             return res.status(200).json({ data: { otpToken, message: 'OTP sent successfully' }, error: null });
         }
 
-        if (action === 'verifyOTPAndUpdatePassword') {
-            const { email, otp, otpToken, newPassword } = payload;
+        if (action === 'verifyOTP') {
+            const { email, otp, otpToken } = payload;
             
-            if (!otpToken || !otp || !newPassword) {
+            if (!otpToken || !otp) {
                 return res.status(400).json({ error: { message: 'Missing parameters' }, data: null });
             }
             
@@ -151,6 +151,30 @@ export default async function handler(req, res) {
             const isMatch = await bcrypt.compare(otp, decoded.otpHash);
             if (!isMatch) {
                 return res.status(401).json({ error: { message: 'Incorrect OTP' }, data: null });
+            }
+            
+            // Generate a token specifically authorizing a password reset
+            const verifiedToken = jwt.sign({ sub: decoded.sub, email, canResetPassword: true }, process.env.JWT_SECRET, { expiresIn: '10m' });
+            
+            return res.status(200).json({ data: { verifiedToken, message: 'OTP Verified successfully' }, error: null });
+        }
+
+        if (action === 'updatePasswordWithToken') {
+            const { verifiedToken, newPassword } = payload;
+            
+            if (!verifiedToken || !newPassword) {
+                return res.status(400).json({ error: { message: 'Missing parameters' }, data: null });
+            }
+            
+            let decoded;
+            try {
+                decoded = jwt.verify(verifiedToken, process.env.JWT_SECRET);
+            } catch (err) {
+                return res.status(401).json({ error: { message: 'Session expired. Please restart the process.' }, data: null });
+            }
+            
+            if (!decoded.canResetPassword) {
+                return res.status(401).json({ error: { message: 'Unauthorized action' }, data: null });
             }
 
             const hashedPassword = await bcrypt.hash(newPassword, 10);
