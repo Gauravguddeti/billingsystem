@@ -1702,19 +1702,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 setEditingInvoiceId(null);
                 setIsEditMode(false);
-                // Smart invalidation: flush only the data that changed, not everything
                 invalidateCache('invoices', 'customers', 'products');
                 await Promise.all([loadInvoices(), loadCustomers(), loadProducts(), generateNextInvoiceNumber()]);
-                clearInvoiceCache();
-                setInvDate(getCurrentDate());
-                setCustName('');
-                setCustAddr('');
-                setCustGST('');
-                setCustPhone('');
-                setItems([{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);
-                setDiscount(0);
-                setDiscountAmount(0);
-                alert(overwrite ? 'Invoice updated successfully!' : 'Invoice saved successfully!');
+                showToast(overwrite ? '✅ Invoice updated — review and print when ready' : '✅ Invoice saved — review and print when ready', 'ok', 5000);
             };
             
             const updatePaymentStatus = async (invoice, status, amountPaid, notes) => {

@@ -274,6 +274,11 @@ export default async function handler(req, res) {
         } else if (action === 'insert') {
             const items = Array.isArray(payload) ? payload : [payload];
             if (items.length === 0) return res.status(200).json({ data: [], error: null });
+            // Security: if payload has user_id, it must match the authenticated user
+            const USER_OWNED = new Set(['invoices','customers','product_rates','categories','user_profiles','businesses']);
+            if (USER_OWNED.has(table) && items[0].user_id && items[0].user_id !== authUser.sub) {
+                return res.status(403).json({ error: { message: 'Forbidden: user_id mismatch' }, data: null });
+            }
             const keys = Object.keys(items[0]);
             const columns = keys.map(k => `"${k}"`).join(', ');
             const values = [];
@@ -285,8 +290,13 @@ export default async function handler(req, res) {
             query = `INSERT INTO "${table}" (${columns}) VALUES ${values.join(', ')} RETURNING ${safeSelect}`;
         } else if (action === 'update') {
             const keys = Object.keys(payload);
+            // Security: prevent updating user_id to a different value
+            if (payload.user_id && payload.user_id !== authUser.sub) {
+                return res.status(403).json({ error: { message: 'Forbidden: cannot change user_id' }, data: null });
+            }
             const setClause = keys.map(k => { params.push(payload[k]); return `"${k}" = $${paramIndex++}`; }).join(', ');
             query = `UPDATE "${table}" SET ${setClause}${buildWhere()} RETURNING ${safeSelect}`;
+
         } else if (action === 'upsert') {
             const items = Array.isArray(payload) ? payload : [payload];
             if (items.length === 0) return res.status(200).json({ data: [], error: null });
