@@ -979,8 +979,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [showBusinessForm, setShowBusinessForm] = useState(false);
             const [editingBusiness, setEditingBusiness] = useState(null);
             const [bizForm, setBizForm] = useState({name:'',address:'',gstin:'',phone:'',email:'',bank_name:'',branch_name:'',account_no:'',ifsc:''});
-            const [toast, setToast] = useState(null); // {msg, type:'ok'|'err'}
+            const [toast, setToast] = useState(null);
             const [importLoading, setImportLoading] = useState(false);
+            const [extractedOrders, setExtractedOrders] = useState([]); // multi-order modal
+            const [showOrderModal, setShowOrderModal] = useState(false);
             const importFileRef = useRef(null);
 
             const showToast = (msg, type = 'ok', ms = 4000) => {
@@ -1440,8 +1442,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 await loadBusinesses();
             };
 
+
             const saveProfile = () => {
-                // Legacy: save current config back to active business
                 if (!activeBusiness) return;
                 const b = {
                     id: activeBusiness.id, name: config.name, address: config.address,
@@ -1453,11 +1455,35 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 saveBusiness(b, false);
             };
 
-            // ── Import Order from image via Groq Vision ──────────────────
+            // ── Import Order from WhatsApp screenshot via Groq Vision ──────
+            const WHATSAPP_PROMPT = `This is a WhatsApp chat screenshot containing one or more orders from different shops. Each order block has: a shop photo (ignore the image), then text with Date, Outlet Name, Area, Order items, and Value.\n\nExtract ALL order blocks you can find. For each order:\n- customerName: the Outlet Name (text only, ignore shop signboard images)\n- customerAddress: the Area\n- date: the Date field\n- items: parse each order line. Format is usually 'ProductName Rate/ - QtyPcs'\n  Examples:\n  '75GM Jelly 120/ -2Pcs' -> name:'75GM Jelly', rate:120, qty:2\n  '25 Pcs Jelly - 00 Pcs' -> name:'25 Pcs Jelly', rate:0, qty:0\n  'Value -336' is the total, NOT an item - skip it\n- Skip any items where qty is 0\n- If Outlet Name is blank/missing, set customerName to null\n\nReturn ONLY this JSON, no explanation, no markdown:\n{"orders":[{"customerName":"string or null","customerAddress":"string or null","date":"string or null","items":[{"name":"string","rate":0,"qty":0}]}]}`;
+
+            const loadOrderIntoForm = (order) => {
+                if (order.customerName)    setCustName(order.customerName);
+                if (order.customerAddress) setCustAddr(order.customerAddress);
+                const activeItems = (order.items || []).filter(it => it.qty > 0);
+                const newItems = activeItems.map((it, idx) => {
+                    const match = prods.find(p => p.name.toLowerCase() === (it.name||'').toLowerCase());
+                    return {
+                        id: Date.now() + idx,
+                        name: it.name || '',
+                        hsn: match?.hsn || selectedCategory?.default_hsn || '33074100',
+                        qty: it.qty || 1, unit: 'Pcs',
+                        rate: match ? parseFloat(match.rate) : (parseFloat(it.rate) || 0),
+                        mrp:  match ? parseFloat(match.mrp)  : (parseFloat(it.mrp)  || 0),
+                        freeQty: 0, freeUnit: 'Pcs', discount: 0, discountAmount: 0
+                    };
+                });
+                newItems.push({ id: Date.now()+9999, name:'', hsn: selectedCategory?.default_hsn||'33074100', qty:1, unit:'Pcs', rate:0, mrp:0, freeQty:0, freeUnit:'Pcs', discount:0, discountAmount:0 });
+                setItems(newItems);
+                setShowOrderModal(false);
+                showToast(`✅ Loaded ${activeItems.length} item${activeItems.length!==1?'s':''} for ${order.customerName||'order'} — review before saving`, 'ok');
+            };
+
             const importFromImage = async (file) => {
                 if (!file) return;
                 if (!file.type.startsWith('image/')) {
-                    showToast('PDF not supported yet — please take a screenshot of the order and upload that instead.', 'err', 6000);
+                    showToast('PDF not supported — please screenshot the order and upload as image.', 'err', 6000);
                     return;
                 }
                 setImportLoading(true);
@@ -1468,54 +1494,36 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         reader.onerror = rej;
                         reader.readAsDataURL(file);
                     });
-
                     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: GROQ_MODEL, temperature: 0, max_tokens: 1000,
+                            model: GROQ_MODEL, temperature: 0, max_tokens: 2000,
                             messages: [{ role: 'user', content: [
                                 { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64}` } },
-                                { type: 'text', text: 'You are an invoice data extractor. Extract order details from this image.\nReturn ONLY raw valid JSON, no markdown, no backticks, no explanation.\nExact format:\n{"customerName":"string or null","customerPhone":"string or null","customerAddress":"string or null","items":[{"name":"product name as written","qty":0,"rate":0,"mrp":0}],"notes":"string or null"}\nIf something is not visible, use null for strings and 0 for numbers. Do not guess rates. If rate is not written in the image, use 0.' }
+                                { type: 'text', text: WHATSAPP_PROMPT }
                             ]}]
                         })
                     });
-
                     if (!resp.ok) {
                         const errData = await resp.json().catch(() => ({}));
                         throw new Error(errData.error?.message || `API error ${resp.status}`);
                     }
-
                     const data = await resp.json();
                     let raw = data.choices?.[0]?.message?.content || '';
                     raw = raw.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
-
                     let parsed;
-                    try { parsed = JSON.parse(raw); }
-                    catch { showToast('❌ Couldn\'t read order clearly, please fill manually', 'err'); setImportLoading(false); return; }
+                    try { parsed = JSON.parse(raw); } catch { showToast('❌ Couldn\'t read orders clearly, please fill manually', 'err'); setImportLoading(false); return; }
 
-                    if (parsed.customerName)    setCustName(parsed.customerName);
-                    if (parsed.customerPhone)   setCustPhone(parsed.customerPhone);
-                    if (parsed.customerAddress) setCustAddr(parsed.customerAddress);
+                    const orders = Array.isArray(parsed.orders) ? parsed.orders.filter(o => (o.items||[]).some(i => i.qty > 0)) : [];
+                    if (orders.length === 0) { showToast('⚠️ No orders with items found in screenshot', 'err'); return; }
 
-                    if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-                        const newItems = parsed.items.map((it, idx) => {
-                            const match = prods.find(p => p.name.toLowerCase() === (it.name||'').toLowerCase());
-                            return {
-                                id: Date.now() + idx,
-                                name: it.name || '',
-                                hsn: match?.hsn || selectedCategory?.default_hsn || '33074100',
-                                qty: it.qty || 1, unit: 'Pcs',
-                                rate: match ? parseFloat(match.rate) : (parseFloat(it.rate) || 0),
-                                mrp:  match ? parseFloat(match.mrp)  : (parseFloat(it.mrp)  || 0),
-                                freeQty: 0, freeUnit: 'Pcs', discount: 0, discountAmount: 0
-                            };
-                        });
-                        newItems.push({ id: Date.now()+9999, name:'', hsn: selectedCategory?.default_hsn||'33074100', qty:1, unit:'Pcs', rate:0, mrp:0, freeQty:0, freeUnit:'Pcs', discount:0, discountAmount:0 });
-                        setItems(newItems);
-                        showToast(`✅ Extracted ${parsed.items.length} item${parsed.items.length>1?'s':''} — please review before saving`, 'ok');
+                    if (orders.length === 1) {
+                        loadOrderIntoForm(orders[0]);
                     } else {
-                        showToast('⚠️ No items found in image — please fill manually', 'err');
+                        setExtractedOrders(orders);
+                        setShowOrderModal(true);
+                        showToast(`Found ${orders.length} orders in screenshot — select one to load`, 'ok', 5000);
                     }
                 } catch(e) {
                     showToast('❌ Import failed: ' + e.message, 'err');
@@ -1524,6 +1532,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     if (importFileRef.current) importFileRef.current.value = '';
                 }
             };
+
 
             const saveCategory = async () => {
                 if (!categoryFormData.name) {
@@ -1843,8 +1852,50 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 // Hidden file input for Import Order
                 h('input', { type:'file', accept:'image/*', ref: importFileRef, style:{ display:'none' },
                     onChange: e => { const f = e.target.files?.[0]; if(f) importFromImage(f); } }),
+                // Multi-order selection modal
+                showOrderModal && h('div', {
+                    style:{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:10000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' },
+                    onClick: e => { if(e.target===e.currentTarget) setShowOrderModal(false); }
+                },
+                    h('div', { style:{ background:'#fff', borderRadius:'16px', width:'100%', maxWidth:'480px', maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'0 24px 60px rgba(0,0,0,0.3)', overflow:'hidden' } },
+                        h('div', { style:{ padding:'20px 24px 16px', borderBottom:'1px solid #e5e7eb', display:'flex', justifyContent:'space-between', alignItems:'center' } },
+                            h('div', {},
+                                h('h2', { style:{ fontSize:'18px', fontWeight:700, color:'#1f2937', margin:0 } }, '📋 Multiple Orders Found'),
+                                h('p', { style:{ fontSize:'13px', color:'#6b7280', margin:'4px 0 0' } }, `${extractedOrders.length} orders detected — pick one to load into invoice`)
+                            ),
+                            h('button', { onClick:()=>setShowOrderModal(false), style:{ background:'none', border:'none', fontSize:'20px', cursor:'pointer', color:'#6b7280', lineHeight:1 } }, '✕')
+                        ),
+                        h('div', { style:{ overflowY:'auto', padding:'12px 16px', display:'flex', flexDirection:'column', gap:'10px' } },
+                            extractedOrders.map((order, idx) => {
+                                const activeItems = (order.items||[]).filter(i=>i.qty>0);
+                                const total = activeItems.reduce((s,i)=>s+(i.rate||0)*(i.qty||0),0);
+                                return h('div', { key:idx, style:{ border:'2px solid #e5e7eb', borderRadius:'12px', padding:'14px 16px', background:'#fafafa' } },
+                                    h('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' } },
+                                        h('div', {},
+                                            h('p', { style:{ fontWeight:700, fontSize:'15px', color:'#1f2937', margin:0 } }, order.customerName || '(No outlet name)'),
+                                            h('p', { style:{ fontSize:'12px', color:'#6b7280', margin:'2px 0 0' } }, [order.customerAddress, order.date].filter(Boolean).join(' · ') || 'No details')
+                                        ),
+                                        h('div', { style:{ textAlign:'right' } },
+                                            h('p', { style:{ fontSize:'13px', fontWeight:600, color:'#7c3aed' } }, `${activeItems.length} item${activeItems.length!==1?'s':''}`),
+                                            total > 0 && h('p', { style:{ fontSize:'12px', color:'#6b7280' } }, `₹${total.toFixed(0)}`)
+                                        )
+                                    ),
+                                    h('div', { style:{ fontSize:'12px', color:'#4b5563', marginBottom:'10px' } },
+                                        activeItems.slice(0,3).map((it,i)=>h('span',{key:i,style:{display:'inline-block',background:'#f3f4f6',borderRadius:'6px',padding:'2px 8px',marginRight:'4px',marginBottom:'3px'}},`${it.name} ×${it.qty}`)),
+                                        activeItems.length > 3 && h('span',{style:{color:'#9ca3af',fontSize:'11px'}},`+${activeItems.length-3} more`)
+                                    ),
+                                    h('button', {
+                                        onClick: () => loadOrderIntoForm(order),
+                                        style:{ width:'100%', padding:'8px', background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', borderRadius:'8px', fontWeight:600, fontSize:'13px', cursor:'pointer' }
+                                    }, 'Create Invoice →')
+                                );
+                            })
+                        )
+                    )
+                ),
                 h('div',{className:'no-print min-h-screen bg-gray-50'},
                 // Top Navigation
+
                 h('div',{className:'gradient-bg text-white shadow-xl sticky top-0 z-40'},
                     h('div',{className:'container mx-auto px-4 md:px-6 py-3 md:py-4'},
                         h('div',{className:'flex items-center justify-between gap-2'},
