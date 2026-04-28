@@ -71,8 +71,8 @@ export default async function handler(req, res) {
             return res.status(200).json({ data: { user, session: { access_token: token, user } }, error: null });
         }
 
-        if (action === 'resetPassword') {
-            const { email, opts } = payload;
+        if (action === 'sendOTP') {
+            const { email } = payload;
             let user;
             try {
                 const { rows } = await pool.query(`SELECT * FROM auth.users WHERE email = $1`, [email]);
@@ -83,14 +83,14 @@ export default async function handler(req, res) {
             }
 
             if (!user) {
-                // Return success even if user not found to prevent email enumeration
-                return res.status(200).json({ data: { message: 'Password reset email sent' }, error: null });
+                return res.status(404).json({ error: { message: 'User not found. Please sign up instead.' }, data: null });
             }
 
-            // Generate a short-lived reset token
-            const token = jwt.sign({ sub: user.id, email: user.email, role: 'authenticated' }, process.env.JWT_SECRET, { expiresIn: '15m' });
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const otpHash = await bcrypt.hash(otp, 10);
             
-            const resetLink = `${opts?.redirectTo || 'http://localhost:3000/?reset=1'}&token=${token}`;
+            // Generate a short-lived token containing the OTP hash
+            const otpToken = jwt.sign({ sub: user.id, email: user.email, otpHash }, process.env.JWT_SECRET, { expiresIn: '15m' });
             
             // Set up Nodemailer
             const transporter = nodemailer.createTransport({
@@ -107,26 +107,61 @@ export default async function handler(req, res) {
                 await transporter.sendMail({
                     from: `"Smart GST Billing" <${process.env.GMAIL_EMAIL || process.env.SMTP_USER}>`,
                     to: email,
-                    subject: 'Reset Your Password',
-                    text: `You requested a password reset. Click this link to set a new password: ${resetLink}`,
+                    subject: 'Password Reset OTP',
+                    text: `Your password reset OTP is: ${otp}. This code expires in 15 minutes.`,
                     html: `
                         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                            <h2 style="color: #333;">Password Reset Request</h2>
-                            <p>You recently requested to reset your password for your Smart GST Billing account.</p>
-                            <p>Click the button below to set a new password. This link will expire in 15 minutes.</p>
+                            <h2 style="color: #333;">Password Reset OTP</h2>
+                            <p>You requested to reset your password for your Smart GST Billing account.</p>
+                            <p>Here is your One-Time Password (OTP):</p>
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="${resetLink}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+                                <span style="background-color: #f3f4f6; color: #333; padding: 15px 30px; border-radius: 5px; font-weight: bold; font-size: 24px; letter-spacing: 5px;">${otp}</span>
                             </div>
+                            <p>This code will expire in 15 minutes.</p>
                             <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
                         </div>
                     `
                 });
             } catch (err) {
                 console.error('Email send error:', err);
-                return res.status(500).json({ error: { message: 'Failed to send reset email' }, data: null });
+                return res.status(500).json({ error: { message: 'Failed to send OTP email' }, data: null });
             }
 
-            return res.status(200).json({ data: { message: 'Password reset email sent' }, error: null });
+            return res.status(200).json({ data: { otpToken, message: 'OTP sent successfully' }, error: null });
+        }
+
+        if (action === 'verifyOTPAndUpdatePassword') {
+            const { email, otp, otpToken, newPassword } = payload;
+            
+            if (!otpToken || !otp || !newPassword) {
+                return res.status(400).json({ error: { message: 'Missing parameters' }, data: null });
+            }
+            
+            let decoded;
+            try {
+                decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
+            } catch (err) {
+                return res.status(401).json({ error: { message: 'OTP has expired or is invalid. Please request a new one.' }, data: null });
+            }
+            
+            if (decoded.email !== email) {
+                return res.status(401).json({ error: { message: 'Invalid OTP request' }, data: null });
+            }
+
+            const isMatch = await bcrypt.compare(otp, decoded.otpHash);
+            if (!isMatch) {
+                return res.status(401).json({ error: { message: 'Incorrect OTP' }, data: null });
+            }
+
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            
+            try {
+                await pool.query(`UPDATE auth.users SET encrypted_password = $1 WHERE id = $2`, [hashedPassword, decoded.sub]);
+            } catch (e) {
+                await pool.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashedPassword, decoded.sub]);
+            }
+            
+            return res.status(200).json({ data: { message: 'Password updated successfully' }, error: null });
         }
 
         if (action === 'updateUser') {
