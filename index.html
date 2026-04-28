@@ -537,15 +537,14 @@
                     });
                     const json = await res.json();
                     if (json.error) throw new Error(json.error.message);
+                    
+                    // Immediately redirect back to login page and show success message
+                    setShowForgotPassword(false);
+                    setResetStep('email');
+                    setOtp('');
+                    setNewPassword('');
+                    setConfirmNewPassword('');
                     setMsg('Password updated successfully! You can now log in.');
-                    setTimeout(() => {
-                        setShowForgotPassword(false);
-                        setResetStep('email');
-                        setOtp('');
-                        setNewPassword('');
-                        setConfirmNewPassword('');
-                        setMsg('');
-                    }, 3000);
                 } catch (err) {
                     setError(err.message);
                 } finally {
