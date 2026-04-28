@@ -12,93 +12,89 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
         
-        /* Print Styles */
-        @page { margin: 0; }
+        /* ── PRINT STYLES ─────────────────────────────────────────────── */
+        @page { size: A4 portrait; margin: 0; }
         @media print {
             .no-print { display: none !important; }
-            body { margin: 0; padding: 14mm 12mm; font-size: 13px; }
-            .print-container { 
-                display: block !important;
-                width: 100%; 
-                max-width: 210mm; 
-                margin: 0 auto; 
-                page-break-after: avoid;
-            }
-            .invoice-table { 
-                border-collapse: collapse; 
-                width: 100%; 
+            body {
+                margin: 0;
+                padding: 10mm 12mm;
                 font-size: 12px;
-                margin: 10px 0;
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            .invoice-table th, .invoice-table td { 
-                border: 1px solid #000; 
-                padding: 5px 8px; 
-                text-align: left; 
+
+            /* Full-page invoice (> 5 items) */
+            .print-container {
+                display: block !important;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .invoice-table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 11px;
+                margin: 8px 0;
+            }
+            .invoice-table th, .invoice-table td {
+                border: 1px solid #000;
+                padding: 4px 7px;
+                text-align: left;
                 word-wrap: break-word;
             }
-            .print-header { 
-                border-bottom: 2px solid #000; 
-                padding-bottom: 8px; 
-                margin-bottom: 12px; 
+            .print-header {
+                border-bottom: 2px solid #000;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
             }
-            .print-footer { 
-                border-top: 2px solid #000; 
-                padding-top: 8px; 
-                margin-top: 12px; 
+            .print-footer {
+                border-top: 2px solid #000;
+                padding-top: 8px;
+                margin-top: 10px;
             }
-            h1, h2, h3 { margin: 5px 0; }
+            h1, h2, h3 { margin: 4px 0; }
             p { margin: 2px 0; }
-            
-            /* Half-A4: when ≤5 items — compact so 2 invoices fit on 1 A4 page */
+
+            /* ── HALF-PAGE invoice (≤ 5 items) ──
+               Fills exactly half an A4 sheet (≈ 138mm of printable height).
+               Two such invoices can be cut and handed out from one A4 print. */
             .small-invoice {
-                font-size: 8px !important;
-                max-height: 138mm;
+                display: flex !important;
+                flex-direction: column !important;
+                min-height: 130mm;      /* stretch to fill half-page */
+                max-height: 138mm;      /* never exceed half-page */
+                box-sizing: border-box;
                 overflow: hidden;
+                border-bottom: 1.5px dashed #888;  /* cut-here line */
+                padding-bottom: 4mm;
+                margin-bottom: 3mm;
+                page-break-after: always;
             }
-            .small-invoice .print-header {
-                padding-bottom: 2px !important;
-                margin-bottom: 4px !important;
-            }
+            /* Push footer to bottom of the half-page */
             .small-invoice .print-footer {
-                padding-top: 2px !important;
-                margin-top: 4px !important;
+                margin-top: auto !important;
+                padding-top: 5px !important;
             }
             .small-invoice .invoice-table {
-                font-size: 7.5px !important;
-                margin: 2px 0 !important;
+                font-size: 9.5px !important;
+                margin: 5px 0 !important;
             }
             .small-invoice .invoice-table th,
             .small-invoice .invoice-table td {
-                padding: 1.5px 3px !important;
+                padding: 3px 5px !important;
             }
-            .small-invoice h1 {
-                font-size: 13px !important;
-                margin: 0 0 2px 0 !important;
+            .small-invoice h1  { font-size: 15px !important; margin: 0 0 3px 0 !important; }
+            .small-invoice h2  { font-size: 13px !important; margin: 0 0 3px 0 !important; }
+            .small-invoice h3  { font-size: 11px !important; margin: 0 0 2px 0 !important; }
+            .small-invoice p   { font-size: 9.5px !important; margin: 1px 0 !important; line-height: 1.3 !important; }
+            .small-invoice .print-header {
+                padding-bottom: 5px !important;
+                margin-bottom: 6px !important;
             }
-            .small-invoice h2 {
-                font-size: 11px !important;
-                margin: 0 0 2px 0 !important;
-            }
-            .small-invoice h3 {
-                font-size: 9px !important;
-                margin: 0 0 1px 0 !important;
-            }
-            .small-invoice p {
-                font-size: 8px !important;
-                margin: 0 !important;
-                line-height: 1.2 !important;
-            }
-            /* Compress the Bill To box */
-            .small-invoice .print-header > div:last-child {
-                padding: 4px !important;
-                margin-bottom: 4px !important;
-            }
-            /* Kill the signature height */
-            .small-invoice .print-footer .signature-gap {
-                height: 20px !important;
-            }
+            .small-invoice .print-footer .signature-gap { height: 28px !important; }
         }
-        
+
         @media screen { .print-container { display: none; } }
         
         /* Enhanced Gradients & Effects */
@@ -958,7 +954,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [invNum, setInvNum] = useState('INV-001');
             const [invDate, setInvDate] = useState(getCurrentDate());
             const [taxInc, setTaxInc] = useState(_savedUI.taxInc || false);
-            const [config, setConfig] = useState(null);
+            const [config, setConfig] = useState({name:'',address:'',gstin:'',phone:'',email:'',bankName:'',branchName:'',accountNo:'',ifsc:''});
+            const [businesses, setBusinesses] = useState([]);
+            const [activeBusiness, setActiveBusiness] = useState(null); // full DB row
+            const [showBusinessForm, setShowBusinessForm] = useState(false);
+            const [editingBusiness, setEditingBusiness] = useState(null); // null=add, obj=edit
+            const [bizForm, setBizForm] = useState({name:'',address:'',gstin:'',phone:'',email:'',bank_name:'',branch_name:'',account_no:'',ifsc:''});
             const [fromDate, setFromDate] = useState(_savedUI.fromDate || '');
             const [toDate, setToDate] = useState(_savedUI.toDate || '');
             const [discount, setDiscount] = useState(0);
@@ -1223,31 +1224,42 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             };
             
             // Wrap each loader with deduplication (SWR: show cache instantly, fetch fresh silently)
-            const loadProfile = () => _dedupe('profile', async () => {
-                const cached = getCachedData('profile');
-                if (cached) setConfig(cached);
+            // Map a businesses DB row → config shape used throughout the app
+            const mapBiz = b => !b ? {} : ({
+                businessId: b.id,
+                name: b.name || '',
+                address: b.address || '',
+                gstin: b.gstin || '',
+                phone: b.phone || '',
+                email: b.email || user.email,
+                bankName: b.bank_name || '',
+                branchName: b.branch_name || '',
+                accountNo: b.account_no || '',
+                ifsc: b.ifsc || ''
+            });
 
-                const { data } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
-                if (data) {
-                    const configData = {
-                        name: data.business_name || 'Your Business Name',
-                        address: data.business_address || 'Your Address',
-                        gstin: data.gstin || '',
-                        phone: data.phone || '',
-                        email: data.email || user.email,
-                        bankName: data.bank_name || '',
-                        branchName: data.branch_name || '',
-                        accountNo: data.account_no || '',
-                        ifsc: data.ifsc || ''
-                    };
-                    setConfig(configData);
-                    setCachedData('profile', configData);
-                } else {
-                    const defaultConfig = { name:'Your Business Name', address:'Your Address', gstin:'', phone:'', email:user.email, bankName:'', branchName:'', accountNo:'', ifsc:'' };
-                    setConfig(defaultConfig);
-                    setCachedData('profile', defaultConfig);
+            const loadBusinesses = () => _dedupe('businesses', async () => {
+                const cached = getCachedData('businesses');
+                if (cached && cached.length > 0) {
+                    setBusinesses(cached);
+                    const def = cached.find(b => b.is_default) || cached[0];
+                    setActiveBusiness(def);
+                    setConfig(mapBiz(def));
+                }
+                const { data } = await supabase.from('businesses').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+                if (data && data.length > 0) {
+                    setBusinesses(data);
+                    const def = data.find(b => b.is_default) || data[0];
+                    setActiveBusiness(prev => prev ? data.find(b => b.id === prev.id) || def : def);
+                    setConfig(prev => prev?.businessId ? mapBiz(data.find(b => b.id === prev.businessId) || def) : mapBiz(def));
+                    setCachedData('businesses', data);
+                } else if (!cached || cached.length === 0) {
+                    // No businesses yet — auto-create one from user_profiles fallback
+                    setConfig({ name:'', address:'', gstin:'', phone:'', email:user.email, bankName:'', branchName:'', accountNo:'', ifsc:'' });
                 }
             });
+
+            const loadProfile = loadBusinesses; // alias so loadAllData still works
 
             const loadCustomers = () => _dedupe('customers', async () => {
                 const cached = getCachedData('customers');
@@ -1354,27 +1366,64 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
             };
             
-            const saveProfile = async () => {
-                const { error } = await supabase
-                    .from('user_profiles')
-                    .upsert({
-                        id: user.id,
-                        business_name: config.name,
-                        business_address: config.address,
-                        gstin: config.gstin,
-                        phone: config.phone,
-                        email: config.email,
-                        bank_name: config.bankName,
-                        branch_name: config.branchName || '',
-                        account_no: config.accountNo,
-                        ifsc: config.ifsc
-                    });
-                
-                if (!error) {
-                    invalidateCache('profile');
-                    await loadProfile();
-                    alert('Settings saved!');
+            const saveBusiness = async (biz, isNew = false) => {
+                if (!biz.name.trim()) { alert('Business name is required!'); return; }
+                const payload = {
+                    user_id: user.id,
+                    name: biz.name, address: biz.address || '',
+                    gstin: biz.gstin || '', phone: biz.phone || '',
+                    email: biz.email || '', bank_name: biz.bank_name || '',
+                    branch_name: biz.branch_name || '', account_no: biz.account_no || '',
+                    ifsc: biz.ifsc || '', is_default: isNew ? businesses.length === 0 : (biz.is_default || false)
+                };
+                if (isNew) {
+                    const { data, error } = await supabase.from('businesses').insert(payload).select().single();
+                    if (!error && data) {
+                        invalidateCache('businesses');
+                        await loadBusinesses();
+                        setShowBusinessForm(false);
+                        alert('Business added!');
+                    } else alert('Error: ' + (error?.message || 'unknown'));
+                } else {
+                    const { error } = await supabase.from('businesses').update(payload).eq('id', biz.id);
+                    if (!error) {
+                        invalidateCache('businesses');
+                        await loadBusinesses();
+                        setShowBusinessForm(false);
+                        setEditingBusiness(null);
+                        alert('Business saved!');
+                    } else alert('Error: ' + (error?.message || 'unknown'));
                 }
+            };
+
+            const setDefaultBusiness = async (biz) => {
+                // Clear all is_default, set the chosen one
+                await Promise.all(businesses.map(b =>
+                    supabase.from('businesses').update({ is_default: b.id === biz.id }).eq('id', b.id)
+                ));
+                invalidateCache('businesses');
+                await loadBusinesses();
+            };
+
+            const deleteBusiness = async (biz) => {
+                if (businesses.length <= 1) { alert('You need at least one business.'); return; }
+                if (!confirm('Delete "' + biz.name + '"? This cannot be undone.')) return;
+                await supabase.from('businesses').delete().eq('id', biz.id);
+                invalidateCache('businesses');
+                await loadBusinesses();
+            };
+
+            const saveProfile = () => {
+                // Legacy: save current config back to active business
+                if (!activeBusiness) return;
+                const b = {
+                    id: activeBusiness.id, name: config.name, address: config.address,
+                    gstin: config.gstin, phone: config.phone, email: config.email,
+                    bank_name: config.bankName, branch_name: config.branchName,
+                    account_no: config.accountNo, ifsc: config.ifsc,
+                    is_default: activeBusiness.is_default
+                };
+                saveBusiness(b, false);
             };
             
             const saveCategory = async () => {
@@ -1715,47 +1764,88 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     // Main Content
                     view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
                     view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-4 md:p-8'},
-                        h('h2',{className:'text-2xl md:text-3xl font-bold mb-4 md:mb-6 gradient-text'},'⚙️ Settings'),
-                        
-                        // Business Settings Section
-                        h('div',{className:'mb-8 md:mb-12'},
-                            h('h3',{className:'text-xl md:text-2xl font-bold mb-4 text-gray-800'},'Business Information'),
-                            h('div',{className:'max-w-3xl space-y-4 md:space-y-6'},
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Business Name'),h('input',{type:'text',value:config.name,onChange:e=>setConfig({...config,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Address'),h('textarea',{value:config.address,onChange:e=>setConfig({...config,address:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:3})),
-                                h('div',{className:'grid grid-cols-2 gap-6'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'GSTIN'),h('input',{type:'text',value:config.gstin,onChange:e=>setConfig({...config,gstin:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Phone'),h('input',{type:'text',value:config.phone,onChange:e=>setConfig({...config,phone:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
+                        h('h2',{className:'text-2xl md:text-3xl font-bold mb-6 gradient-text'},'⚙️ Settings'),
+
+                        // ── MY BUSINESSES ──────────────────────────────────
+                        h('div',{className:'mb-10'},
+                            h('div',{className:'flex justify-between items-center mb-4'},
+                                h('h3',{className:'text-xl font-bold text-gray-800'},'🏢 My Businesses'),
+                                h('button',{
+                                    onClick:()=>{setEditingBusiness(null);setBizForm({name:'',address:'',gstin:'',phone:'',email:'',bank_name:'',branch_name:'',account_no:'',ifsc:''});setShowBusinessForm(true)},
+                                    className:'gradient-bg text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-semibold flex items-center gap-2'
+                                },'+ New Business')
+                            ),
+
+                            // Business cards list
+                            h('div',{className:'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4'},
+                                businesses.map(biz=>h('div',{key:biz.id,className:'border-2 rounded-xl p-4 transition '+(activeBusiness?.id===biz.id?'border-purple-500 bg-purple-50':'border-gray-200 bg-white hover:border-gray-300')},
+                                    h('div',{className:'flex justify-between items-start'},
+                                        h('div',{className:'flex-1'},
+                                            h('div',{className:'flex items-center gap-2 mb-1'},
+                                                h('h4',{className:'font-bold text-lg text-gray-800'},biz.name),
+                                                biz.is_default&&h('span',{className:'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold'},'Default')
+                                            ),
+                                            biz.gstin&&h('p',{className:'text-xs text-gray-500'},'GSTIN: '+biz.gstin),
+                                            biz.phone&&h('p',{className:'text-xs text-gray-500'},'📞 '+biz.phone)
+                                        ),
+                                        h('div',{className:'flex gap-2 ml-2'},
+                                            h('button',{
+                                                onClick:()=>{setActiveBusiness(biz);setConfig(mapBiz(biz));},
+                                                className:'text-xs px-3 py-1 rounded-lg font-semibold '+(activeBusiness?.id===biz.id?'bg-purple-500 text-white':'bg-gray-100 hover:bg-purple-100 text-gray-700'),
+                                                title:'Use this business for new invoices'
+                                            },activeBusiness?.id===biz.id?'✓ Active':'Select'),
+                                            !biz.is_default&&h('button',{
+                                                onClick:()=>setDefaultBusiness(biz),
+                                                className:'text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 font-semibold',title:'Make Default'
+                                            },'★'),
+                                            h('button',{
+                                                onClick:()=>{setEditingBusiness(biz);setBizForm({name:biz.name,address:biz.address||'',gstin:biz.gstin||'',phone:biz.phone||'',email:biz.email||'',bank_name:biz.bank_name||'',branch_name:biz.branch_name||'',account_no:biz.account_no||'',ifsc:biz.ifsc||''});setShowBusinessForm(true)},
+                                                className:'text-xs px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold'
+                                            },'✎'),
+                                            h('button',{
+                                                onClick:()=>deleteBusiness(biz),
+                                                className:'text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold'
+                                            },'✕')
+                                        )
+                                    )
+                                ))
+                            ),
+
+                            // Add/Edit business form
+                            showBusinessForm&&h('div',{className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200'},
+                                h('h4',{className:'font-bold text-lg mb-4 text-purple-800'},(editingBusiness?'✎ Edit':'➕ Add')+' Business'),
+                                h('div',{className:'grid grid-cols-1 md:grid-cols-2 gap-4'},
+                                    h('div',{className:'md:col-span-2'},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Business Name *'),h('input',{type:'text',value:bizForm.name,onChange:e=>setBizForm({...bizForm,name:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'e.g. Gaurav Enterprises'})),
+                                    h('div',{className:'md:col-span-2'},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Address'),h('textarea',{value:bizForm.address,onChange:e=>setBizForm({...bizForm,address:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',rows:2})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'GSTIN'),h('input',{type:'text',value:bizForm.gstin,onChange:e=>setBizForm({...bizForm,gstin:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Phone'),h('input',{type:'text',value:bizForm.phone,onChange:e=>setBizForm({...bizForm,phone:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{className:'md:col-span-2'},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Email'),h('input',{type:'email',value:bizForm.email,onChange:e=>setBizForm({...bizForm,email:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Bank Name'),h('input',{type:'text',value:bizForm.bank_name,onChange:e=>setBizForm({...bizForm,bank_name:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Branch Name'),h('input',{type:'text',value:bizForm.branch_name,onChange:e=>setBizForm({...bizForm,branch_name:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Account No'),h('input',{type:'text',value:bizForm.account_no,onChange:e=>setBizForm({...bizForm,account_no:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'IFSC'),h('input',{type:'text',value:bizForm.ifsc,onChange:e=>setBizForm({...bizForm,ifsc:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'}))
                                 ),
-                                h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Email'),h('input',{type:'email',value:config.email,onChange:e=>setConfig({...config,email:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('div',{className:'grid grid-cols-2 gap-6'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Bank Name'),h('input',{type:'text',value:config.bankName,onChange:e=>setConfig({...config,bankName:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Branch Name'),h('input',{type:'text',value:config.branchName||'',onChange:e=>setConfig({...config,branchName:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'e.g. Main Branch'}))
-                                ),
-                                h('div',{className:'grid grid-cols-2 gap-6'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Account No'),h('input',{type:'text',value:config.accountNo,onChange:e=>setConfig({...config,accountNo:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'IFSC'),h('input',{type:'text',value:config.ifsc,onChange:e=>setConfig({...config,ifsc:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'}))
-                                ),
-                                h('button',{onClick:saveProfile,className:'gradient-bg text-white px-8 py-3 rounded-lg hover:opacity-90 transition font-semibold text-lg'},'💾 Save Business Settings')
+                                h('div',{className:'flex gap-3 mt-4'},
+                                    h('button',{onClick:()=>saveBusiness({...(editingBusiness||{}), ...bizForm}, !editingBusiness),className:'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
+                                    h('button',{onClick:()=>{setShowBusinessForm(false);setEditingBusiness(null)},className:'bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg transition font-semibold'},'Cancel')
+                                )
                             )
                         ),
-                        
-                        // Categories Section
+
+                        // ── CATEGORIES ─────────────────────────────────────
                         h('div',{className:'border-t-2 pt-8'},
                             h('div',{className:'flex justify-between items-center mb-4'},
-                                h('h3',{className:'text-2xl font-bold text-gray-800'},'Bill Categories'),
-                                h('button',{onClick:()=>{setShowCategoryForm(true);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Category')
+                                h('h3',{className:'text-2xl font-bold text-gray-800'},'📋 Bill Categories'),
+                                h('button',{onClick:()=>{setShowCategoryForm(true);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false,business_id:activeBusiness?.id||null})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition font-semibold'},'➕ Add Category')
                             ),
                             showCategoryForm&&h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
                                 h('h4',{className:'font-bold mb-4 text-lg'},(editingCategory?'Edit':'Add')+' Category'),
                                 h('div',{className:'space-y-4'},
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Category Name'),h('input',{type:'text',value:categoryFormData.name,onChange:e=>setCategoryFormData({...categoryFormData,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'e.g., Retail Bills, Wholesale Bills'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Description (Optional)'),h('textarea',{value:categoryFormData.description,onChange:e=>setCategoryFormData({...categoryFormData,description:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',rows:2,placeholder:'Brief description of this category'})),
-                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Default HSN Code'),h('input',{type:'text',value:categoryFormData.default_hsn,onChange:e=>setCategoryFormData({...categoryFormData,default_hsn:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'33074100'})),
-                                    h('div',{className:'flex items-center gap-3'},
-                                        h('label',{className:'font-semibold text-gray-700'},'Has MRP Column'),
-                                        h('input',{type:'checkbox',checked:categoryFormData.has_mrp,onChange:e=>setCategoryFormData({...categoryFormData,has_mrp:e.target.checked}),className:'w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500'})
-                                    ),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Category Name'),h('input',{type:'text',value:categoryFormData.name,onChange:e=>setCategoryFormData({...categoryFormData,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'e.g., Retail Bills, Wholesale Bills'})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Description (Optional)'),h('textarea',{value:categoryFormData.description,onChange:e=>setCategoryFormData({...categoryFormData,description:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',rows:2})),
+                                    h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Default HSN Code'),h('input',{type:'text',value:categoryFormData.default_hsn,onChange:e=>setCategoryFormData({...categoryFormData,default_hsn:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'33074100'})),
+                                    businesses.length>1&&h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Assign to Business'),h('select',{value:categoryFormData.business_id||'',onChange:e=>setCategoryFormData({...categoryFormData,business_id:e.target.value||null}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'},h('option',{value:''},'— All Businesses —'),businesses.map(b=>h('option',{key:b.id,value:b.id},b.name)))),
+                                    h('div',{className:'flex items-center gap-3'},h('label',{className:'font-semibold text-gray-700'},'Has MRP Column'),h('input',{type:'checkbox',checked:categoryFormData.has_mrp,onChange:e=>setCategoryFormData({...categoryFormData,has_mrp:e.target.checked}),className:'w-5 h-5 text-purple-600 rounded'})),
                                     h('div',{className:'flex gap-3'},
                                         h('button',{onClick:saveCategory,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
                                         h('button',{onClick:()=>{setShowCategoryForm(false);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
@@ -1763,22 +1853,35 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 )
                             ),
                             h('div',{className:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'},
-                                categories.map(cat=>
-                                    h('div',{key:cat.id,className:'bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 transition'},
-                                        h('div',{className:'flex justify-between items-start mb-2'},
-                                            h('h4',{className:'font-bold text-lg text-gray-800'},cat.name),
-                                            h('div',{className:'flex gap-2'},
-                                                h('button',{onClick:()=>{setEditingCategory(cat);setCategoryFormData({name:cat.name,description:cat.description||'',default_hsn:cat.default_hsn||'33074100',has_mrp:cat.has_mrp||false});setShowCategoryForm(true)},className:'text-blue-500 hover:text-blue-700 font-bold'},'✎'),
-                                                h('button',{onClick:()=>deleteCategory(cat.id),className:'text-red-500 hover:text-red-700 font-bold'},'✕')
+                                categories.map(cat=>h('div',{key:cat.id,className:'bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 transition'},
+                                    h('div',{className:'flex justify-between items-start mb-2'},
+                                        h('h4',{className:'font-bold text-lg text-gray-800'},cat.name),
+                                        h('div',{className:'flex gap-2'},
+                                            h('button',{onClick:()=>{setEditingCategory(cat);setCategoryFormData({name:cat.name,description:cat.description||'',default_hsn:cat.default_hsn||'33074100',has_mrp:cat.has_mrp||false,business_id:cat.business_id||null});setShowCategoryForm(true)},className:'text-blue-500 hover:text-blue-700 font-bold'},'✎'),
+                                            h('button',{onClick:()=>deleteCategory(cat.id),className:'text-red-500 hover:text-red-700 font-bold'},'✕')
+                                        )
+                                    ),
+                                    cat.description&&h('p',{className:'text-gray-600 text-sm mb-2'},cat.description),
+                                    h('div',{className:'flex flex-wrap gap-2 text-xs'},
+                                        h('span',{className:'bg-gray-100 text-gray-700 px-2 py-1 rounded'},'HSN: '+cat.default_hsn),
+                                        cat.has_mrp&&h('span',{className:'bg-green-100 text-green-700 px-2 py-1 rounded'},'Has MRP'),
+                                        businesses.length>1&&h('div',{className:'w-full mt-1'},
+                                            h('select',{
+                                                value:cat.business_id||'',
+                                                onChange:async e=>{
+                                                    const bId=e.target.value||null;
+                                                    await supabase.from('categories').update({business_id:bId}).eq('id',cat.id);
+                                                    invalidateCache('categories');
+                                                    await loadCategories();
+                                                },
+                                                className:'text-xs w-full px-2 py-1 border border-gray-200 rounded bg-gray-50'
+                                            },
+                                                h('option',{value:''},'All Businesses'),
+                                                businesses.map(b=>h('option',{key:b.id,value:b.id},'→ '+b.name))
                                             )
-                                        ),
-                                        cat.description&&h('p',{className:'text-gray-600 text-sm mb-2'},cat.description),
-                                        h('div',{className:'flex gap-2 text-xs'},
-                                            h('span',{className:'bg-gray-100 text-gray-700 px-2 py-1 rounded'},'HSN: '+cat.default_hsn),
-                                            cat.has_mrp&&h('span',{className:'bg-green-100 text-green-700 px-2 py-1 rounded'},'Has MRP')
                                         )
                                     )
-                                )
+                                ))
                             )
                         )
                     ):view==='invoice'?(!selectedCategory?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
@@ -2080,7 +2183,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 ),
                 
                 // Print Container
-                h('div',{className:'print-container'+(items.filter(i=>i.name).length<=6?' small-invoice':''),style:{pageBreakAfter:items.filter(i=>i.name).length<=6?'auto':'always'}},
+                h('div',{className:'print-container'+(items.filter(i=>i.name).length<=5?' small-invoice':''),style:{pageBreakAfter:'always'}},
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
                             h('div',{},h('h1',{style:{fontSize:'28px',fontWeight:'bold',margin:'0 0 10px 0'}},config?.name||'Business Name'),h('p',{style:{margin:'2px 0',fontSize:'13px'}},config?.address||''),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'GSTIN: '+(config?.gstin||'')),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'Phone: '+(config?.phone||'')),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'Email: '+(config?.email||''))),

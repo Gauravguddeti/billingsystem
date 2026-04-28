@@ -12,17 +12,18 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // Allowed tables — prevents SQL injection via table-name manipulation
 const ALLOWED_TABLES = new Set([
     'invoices', 'invoice_items', 'customers',
-    'product_rates', 'categories', 'user_profiles'
+    'product_rates', 'categories', 'user_profiles', 'businesses'
 ]);
 
 // Allowed columns per table for filter operations
 const ALLOWED_COLUMNS = {
-    invoices:       ['id', 'user_id', 'invoice_number', 'date', 'category_id', 'payment_status', 'created_at'],
+    invoices:       ['id', 'user_id', 'invoice_number', 'date', 'category_id', 'business_id', 'payment_status', 'created_at'],
     invoice_items:  ['id', 'invoice_id', 'item_name'],
     customers:      ['id', 'user_id', 'name'],
     product_rates:  ['id', 'user_id', 'name', 'category_id'],
-    categories:     ['id', 'user_id', 'name'],
+    categories:     ['id', 'user_id', 'name', 'business_id'],
     user_profiles:  ['id', 'user_id'],
+    businesses:     ['id', 'user_id', 'is_default', 'name'],
 };
 
 // Generic sanitized error (never expose raw DB errors to client)
