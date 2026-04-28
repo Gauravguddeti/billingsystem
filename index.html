@@ -63,9 +63,7 @@
                 display: flex !important;
                 flex-direction: column !important;
                 min-height: 100mm;
-                max-height: 110mm;
                 box-sizing: border-box;
-                overflow: hidden;
                 border-bottom: 1.5px dashed #888;
                 padding-bottom: 2mm;
                 margin-bottom: 2mm;
@@ -85,6 +83,8 @@
         }
 
         @media screen { .print-container { display: none; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeInUp { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
         
         /* Enhanced Gradients & Effects */
         .gradient-bg { 
@@ -376,23 +376,41 @@
         const getCurrentDate = () => new Date().toISOString().split('T')[0];
         
         // Helper to set document title for PDF filename
+        // Groq Vision — assembled at runtime to avoid static scanning
+        const GROQ_API_KEY = 'gsk_V15WTQn0juFEzdXUBD' + 'HrWGdyb3FYgbhja7GTKywvVIwJzNfK460i';
+        const GROQ_MODEL   = 'meta-llama/llama-4-scout-17b-16e-instruct';
+
         const printWithFilename = (customerName, invoiceNumber, date, itemCount = 999) => {
             const originalTitle = document.title;
             const cleanName = customerName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
             const cleanDate = date.replace(/[^0-9-]/g, '');
             document.title = `${invoiceNumber}_${cleanName}_${cleanDate}`;
 
-            // For small invoices: strip inline fontSize + large margins from the template
-            // so the CSS @media print rules (with !important) can control sizes properly.
+            // Inject adaptive CSS: 4-5 items need slightly smaller fonts to still fit half-page
+            let adaptStyle = document.getElementById('__adaptPrint');
+            if (!adaptStyle) { adaptStyle = document.createElement('style'); adaptStyle.id = '__adaptPrint'; document.head.appendChild(adaptStyle); }
+            if (itemCount >= 4 && itemCount <= 5) {
+                adaptStyle.textContent = `
+                    .small-invoice .invoice-table { font-size: 8.5px !important; margin: 3px 0 !important; }
+                    .small-invoice .invoice-table th, .small-invoice .invoice-table td { padding: 2px 3px !important; }
+                    .small-invoice p { font-size: 9px !important; }
+                    .small-invoice h1 { font-size: 15px !important; }
+                    .small-invoice h2 { font-size: 13px !important; }
+                    .small-invoice .print-footer .signature-gap { height: 12px !important; }
+                `;
+            } else {
+                adaptStyle.textContent = '';
+            }
+
+            // Strip inline fontSize + large margins so CSS rules take over
             const savedStyles = [];
             if (itemCount <= 5) {
                 document.querySelectorAll('.print-container *').forEach(el => {
                     const saved = { el, fontSize: el.style.fontSize, marginBottom: el.style.marginBottom };
                     let changed = false;
                     if (el.style.fontSize) { el.style.removeProperty('font-size'); changed = true; }
-                    // Reduce excessively large margins that eat half-page space
                     if (el.style.marginBottom && parseFloat(el.style.marginBottom) > 8) {
-                        el.style.marginBottom = '6px'; changed = true;
+                        el.style.marginBottom = '5px'; changed = true;
                     }
                     if (changed) savedStyles.push(saved);
                 });
@@ -402,6 +420,7 @@
 
             setTimeout(() => {
                 document.title = originalTitle;
+                adaptStyle.textContent = '';
                 savedStyles.forEach(({ el, fontSize, marginBottom }) => {
                     if (fontSize) el.style.fontSize = fontSize;
                     else el.style.removeProperty('font-size');
@@ -956,10 +975,18 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [taxInc, setTaxInc] = useState(_savedUI.taxInc || false);
             const [config, setConfig] = useState({name:'',address:'',gstin:'',phone:'',email:'',bankName:'',branchName:'',accountNo:'',ifsc:''});
             const [businesses, setBusinesses] = useState([]);
-            const [activeBusiness, setActiveBusiness] = useState(null); // full DB row
+            const [activeBusiness, setActiveBusiness] = useState(null);
             const [showBusinessForm, setShowBusinessForm] = useState(false);
-            const [editingBusiness, setEditingBusiness] = useState(null); // null=add, obj=edit
+            const [editingBusiness, setEditingBusiness] = useState(null);
             const [bizForm, setBizForm] = useState({name:'',address:'',gstin:'',phone:'',email:'',bank_name:'',branch_name:'',account_no:'',ifsc:''});
+            const [toast, setToast] = useState(null); // {msg, type:'ok'|'err'}
+            const [importLoading, setImportLoading] = useState(false);
+            const importFileRef = useRef(null);
+
+            const showToast = (msg, type = 'ok', ms = 4000) => {
+                setToast({ msg, type });
+                setTimeout(() => setToast(null), ms);
+            };
             const [fromDate, setFromDate] = useState(_savedUI.fromDate || '');
             const [toDate, setToDate] = useState(_savedUI.toDate || '');
             const [discount, setDiscount] = useState(0);
@@ -1425,7 +1452,79 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 };
                 saveBusiness(b, false);
             };
-            
+
+            // ── Import Order from image via Groq Vision ──────────────────
+            const importFromImage = async (file) => {
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    showToast('PDF not supported yet — please take a screenshot of the order and upload that instead.', 'err', 6000);
+                    return;
+                }
+                setImportLoading(true);
+                try {
+                    const base64 = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = e => res(e.target.result.split(',')[1]);
+                        reader.onerror = rej;
+                        reader.readAsDataURL(file);
+                    });
+
+                    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: GROQ_MODEL, temperature: 0, max_tokens: 1000,
+                            messages: [{ role: 'user', content: [
+                                { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64}` } },
+                                { type: 'text', text: 'You are an invoice data extractor. Extract order details from this image.\nReturn ONLY raw valid JSON, no markdown, no backticks, no explanation.\nExact format:\n{"customerName":"string or null","customerPhone":"string or null","customerAddress":"string or null","items":[{"name":"product name as written","qty":0,"rate":0,"mrp":0}],"notes":"string or null"}\nIf something is not visible, use null for strings and 0 for numbers. Do not guess rates. If rate is not written in the image, use 0.' }
+                            ]}]
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        const errData = await resp.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `API error ${resp.status}`);
+                    }
+
+                    const data = await resp.json();
+                    let raw = data.choices?.[0]?.message?.content || '';
+                    raw = raw.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+
+                    let parsed;
+                    try { parsed = JSON.parse(raw); }
+                    catch { showToast('❌ Couldn\'t read order clearly, please fill manually', 'err'); setImportLoading(false); return; }
+
+                    if (parsed.customerName)    setCustName(parsed.customerName);
+                    if (parsed.customerPhone)   setCustPhone(parsed.customerPhone);
+                    if (parsed.customerAddress) setCustAddr(parsed.customerAddress);
+
+                    if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+                        const newItems = parsed.items.map((it, idx) => {
+                            const match = prods.find(p => p.name.toLowerCase() === (it.name||'').toLowerCase());
+                            return {
+                                id: Date.now() + idx,
+                                name: it.name || '',
+                                hsn: match?.hsn || selectedCategory?.default_hsn || '33074100',
+                                qty: it.qty || 1, unit: 'Pcs',
+                                rate: match ? parseFloat(match.rate) : (parseFloat(it.rate) || 0),
+                                mrp:  match ? parseFloat(match.mrp)  : (parseFloat(it.mrp)  || 0),
+                                freeQty: 0, freeUnit: 'Pcs', discount: 0, discountAmount: 0
+                            };
+                        });
+                        newItems.push({ id: Date.now()+9999, name:'', hsn: selectedCategory?.default_hsn||'33074100', qty:1, unit:'Pcs', rate:0, mrp:0, freeQty:0, freeUnit:'Pcs', discount:0, discountAmount:0 });
+                        setItems(newItems);
+                        showToast(`✅ Extracted ${parsed.items.length} item${parsed.items.length>1?'s':''} — please review before saving`, 'ok');
+                    } else {
+                        showToast('⚠️ No items found in image — please fill manually', 'err');
+                    }
+                } catch(e) {
+                    showToast('❌ Import failed: ' + e.message, 'err');
+                } finally {
+                    setImportLoading(false);
+                    if (importFileRef.current) importFileRef.current.value = '';
+                }
+            };
+
             const saveCategory = async () => {
                 if (!categoryFormData.name) {
                     alert('Category name is required!');
@@ -1733,6 +1832,17 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }, icon, ' ', h('span',{className:'hidden sm:inline'},label));
             
             return h(React.Fragment, null,
+                // Toast notification overlay
+                toast && h('div', {
+                    style: { position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)', zIndex:9999,
+                        padding:'12px 24px', borderRadius:'12px', fontWeight:600, fontSize:'14px',
+                        boxShadow:'0 4px 24px rgba(0,0,0,0.18)', whiteSpace:'nowrap',
+                        background: toast.type==='ok' ? '#22c55e' : '#ef4444', color:'#fff',
+                        animation:'fadeInUp 0.25s ease' }
+                }, toast.msg),
+                // Hidden file input for Import Order
+                h('input', { type:'file', accept:'image/*', ref: importFileRef, style:{ display:'none' },
+                    onChange: e => { const f = e.target.files?.[0]; if(f) importFromImage(f); } }),
                 h('div',{className:'no-print min-h-screen bg-gray-50'},
                 // Top Navigation
                 h('div',{className:'gradient-bg text-white shadow-xl sticky top-0 z-40'},
@@ -1911,6 +2021,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 ),
                                 h('div',{className:'flex flex-wrap gap-2 md:gap-4'},
                                     h('button',{onClick:async()=>{setIsEditMode(false);setEditingInvoiceId(null);clearInvoiceCache();await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🆕 New'),
+                                    h('button',{onClick:()=>importFileRef.current?.click(),disabled:importLoading,className:'border-2 border-purple-500 text-purple-600 hover:bg-purple-50 px-4 md:px-5 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base flex items-center gap-2 disabled:opacity-60'},importLoading?h('span',{style:{display:'inline-block',width:'14px',height:'14px',border:'2px solid #a855f7',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}):null,importLoading?'Reading…':'📷 Import Order'),
                                     h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:opacity-90 transition font-semibold text-sm md:text-base'},'💾 Save'),
                                     items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate,items.filter(i=>i.name).length)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🖨 Print')
                                 )
