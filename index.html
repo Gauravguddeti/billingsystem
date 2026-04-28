@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart GST Billing System</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,7 +16,7 @@
         @page { margin: 0; }
         @media print {
             .no-print { display: none !important; }
-            body { margin: 0; padding: 14mm 12mm; font-size: 11px; }
+            body { margin: 0; padding: 14mm 12mm; font-size: 13px; }
             .print-container { 
                 display: block !important;
                 width: 100%; 
@@ -28,12 +27,12 @@
             .invoice-table { 
                 border-collapse: collapse; 
                 width: 100%; 
-                font-size: 10px;
+                font-size: 12px;
                 margin: 10px 0;
             }
             .invoice-table th, .invoice-table td { 
                 border: 1px solid #000; 
-                padding: 4px 6px; 
+                padding: 5px 8px; 
                 text-align: left; 
                 word-wrap: break-word;
             }
@@ -51,16 +50,53 @@
             p { margin: 2px 0; }
             
             /* Half-A4: when ≤5 items — compact so 2 invoices fit on 1 A4 page */
-            .small-invoice { font-size: 9px !important; }
-            .small-invoice .print-header { padding-bottom: 4px; margin-bottom: 6px; }
-            .small-invoice .print-footer { padding-top: 4px; margin-top: 6px; }
-            .small-invoice .invoice-table { font-size: 8px; margin: 4px 0; }
+            .small-invoice {
+                font-size: 8px !important;
+                max-height: 138mm;
+                overflow: hidden;
+            }
+            .small-invoice .print-header {
+                padding-bottom: 2px !important;
+                margin-bottom: 4px !important;
+            }
+            .small-invoice .print-footer {
+                padding-top: 2px !important;
+                margin-top: 4px !important;
+            }
+            .small-invoice .invoice-table {
+                font-size: 7.5px !important;
+                margin: 2px 0 !important;
+            }
             .small-invoice .invoice-table th,
-            .small-invoice .invoice-table td { padding: 2px 4px; }
-            .small-invoice h1 { font-size: 18px !important; margin: 0 0 4px 0 !important; }
-            .small-invoice h2 { font-size: 15px !important; margin: 0 0 4px 0 !important; }
-            .small-invoice h3 { font-size: 11px !important; }
-            .small-invoice p  { font-size: 9px !important; margin: 1px 0 !important; }
+            .small-invoice .invoice-table td {
+                padding: 1.5px 3px !important;
+            }
+            .small-invoice h1 {
+                font-size: 13px !important;
+                margin: 0 0 2px 0 !important;
+            }
+            .small-invoice h2 {
+                font-size: 11px !important;
+                margin: 0 0 2px 0 !important;
+            }
+            .small-invoice h3 {
+                font-size: 9px !important;
+                margin: 0 0 1px 0 !important;
+            }
+            .small-invoice p {
+                font-size: 8px !important;
+                margin: 0 !important;
+                line-height: 1.2 !important;
+            }
+            /* Compress the Bill To box */
+            .small-invoice .print-header > div:last-child {
+                padding: 4px !important;
+                margin-bottom: 4px !important;
+            }
+            /* Kill the signature height */
+            .small-invoice .print-footer .signature-gap {
+                height: 20px !important;
+            }
         }
         
         @media screen { .print-container { display: none; } }
@@ -198,10 +234,133 @@
         const { useState, useEffect, useRef, createElement: h } = React;
         const { render } = ReactDOM;
         
-        // Initialize Supabase
-        const SUPABASE_URL = 'https://yylahhomjnijsybazxpt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bGFoaG9tam5panN5YmF6eHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTIzMDgsImV4cCI6MjA4NTYyODMwOH0.hkQmKxKSZivIzcEG4_3fVT5wrPbgSy9dL1Y2w44Gb5w';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize Neon DB Proxy Shim
+        window._NEON_API = '/api/db';
+        
+        class QueryBuilder {
+            constructor(table) {
+                this.table = table;
+                this._action = 'select';
+                this._select = '*';
+                this._filters = [];
+                this._order = null;
+                this._limit = null;
+                this._single = false;
+                this._payload = null;
+                this._onConflict = null;
+            }
+            select(cols = '*') { this._select = cols; return this; }
+            eq(col, val) { this._filters.push({ type: 'eq', column: col, value: val }); return this; }
+            in(col, valArr) { this._filters.push({ type: 'in', column: col, value: valArr }); return this; }
+            order(col, opts = { ascending: true }) { this._order = { column: col, ascending: opts.ascending }; return this; }
+            limit(n) { this._limit = n; return this; }
+            single() { this._single = true; return this; }
+            insert(payload) { this._action = 'insert'; this._payload = payload; return this; }
+            update(payload) { this._action = 'update'; this._payload = payload; return this; }
+            upsert(payload, opts = {}) { this._action = 'upsert'; this._payload = payload; this._onConflict = opts.onConflict; return this; }
+            delete() { this._action = 'delete'; return this; }
+            
+            async _execute() {
+                const token = localStorage.getItem('neon_session');
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    try {
+                        const parsed = JSON.parse(token);
+                        headers['Authorization'] = `Bearer ${parsed.access_token}`;
+                    } catch (e) {}
+                }
+                const body = JSON.stringify({
+                    action: this._action,
+                    table: this.table,
+                    payload: this._payload,
+                    filters: this._filters,
+                    select: this._select,
+                    order: this._order,
+                    limit: this._limit,
+                    single: this._single,
+                    onConflict: this._onConflict
+                });
+                
+                try {
+                    const res = await fetch(window._NEON_API, { method: 'POST', headers, body });
+                    const json = await res.json();
+                    return json;
+                } catch (error) {
+                    return { data: null, error };
+                }
+            }
+            
+            then(resolve, reject) {
+                return this._execute().then(resolve, reject);
+            }
+        }
+
+        window.supabase = {
+            from: (table) => new QueryBuilder(table),
+            auth: {
+                _notify: [],
+                onAuthStateChange: (cb) => {
+                    window.supabase.auth._notify.push(cb);
+                    return { data: { subscription: { unsubscribe: () => { window.supabase.auth._notify = window.supabase.auth._notify.filter(f => f !== cb); } } } };
+                },
+                getSession: async () => {
+                    const sessionStr = localStorage.getItem('neon_session');
+                    if (sessionStr) {
+                        const session = JSON.parse(sessionStr);
+                        return { data: { session } };
+                    }
+                    return { data: { session: null } };
+                },
+                signInWithPassword: async (credentials) => {
+                    const res = await fetch(window._NEON_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'signIn', payload: credentials })
+                    });
+                    const data = await res.json();
+                    if (!data.error && data.data?.session) {
+                        localStorage.setItem('neon_session', JSON.stringify(data.data.session));
+                        window.supabase.auth._notify.forEach(cb => cb('SIGNED_IN', data.data.session));
+                    }
+                    return data;
+                },
+                signUp: async (credentials) => {
+                    const res = await fetch(window._NEON_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'signUp', payload: credentials })
+                    });
+                    return res.json();
+                },
+                signOut: async () => {
+                    localStorage.removeItem('neon_session');
+                    window.supabase.auth._notify.forEach(cb => cb('SIGNED_OUT', null));
+                    return { error: null };
+                },
+                signInWithOAuth: async () => {
+                    return { error: { message: 'OAuth not supported on this proxy' } };
+                },
+                resetPasswordForEmail: async (email, opts) => {
+                    const res = await fetch(window._NEON_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'resetPassword', payload: { email, opts } })
+                    });
+                    return res.json();
+                },
+                updateUser: async (attributes) => {
+                    const tokenStr = localStorage.getItem('neon_session');
+                    const token = tokenStr ? JSON.parse(tokenStr).access_token : '';
+                    const res = await fetch(window._NEON_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ action: 'updateUser', payload: attributes })
+                    });
+                    return res.json();
+                }
+            }
+        };
+        const supabase = window.supabase;
         
         // Helper functions
         const numberToWords = (num) => {
@@ -231,29 +390,39 @@
         const getCurrentDate = () => new Date().toISOString().split('T')[0];
         
         // Helper to set document title for PDF filename
-        const printWithFilename = (customerName, invoiceNumber, date) => {
+        const printWithFilename = (customerName, invoiceNumber, date, itemCount = 999) => {
             const originalTitle = document.title;
             // Clean customer name for filename (remove special characters)
             const cleanName = customerName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
             const cleanDate = date.replace(/[^0-9-]/g, '');
             document.title = `${invoiceNumber}_${cleanName}_${cleanDate}`;
             
+            const originalPadding = document.body.style.padding;
+            if (itemCount <= 5) {
+                document.body.style.padding = '5mm 8mm';
+            }
+            
             window.print();
             
             // Restore original title after a short delay
             setTimeout(() => {
                 document.title = originalTitle;
+                if (itemCount <= 5) {
+                    document.body.style.padding = originalPadding;
+                }
             }, 100);
         };
         
         // Auth Component
         const AuthPage = ({ onAuthSuccess }) => {
             const [isLogin, setIsLogin] = useState(true);
+            const [showForgotPassword, setShowForgotPassword] = useState(false);
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [rememberMe, setRememberMe] = useState(true);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
+            const [msg, setMsg] = useState('');
             
             const handleAuth = async (e) => {
                 e.preventDefault();
@@ -291,6 +460,61 @@
                 if (error) setError(error.message);
             };
             
+            const handleResetPassword = async (e) => {
+                e.preventDefault();
+                setError('');
+                setMsg('');
+                setLoading(true);
+                try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '?reset=1' });
+                    if (error) throw error;
+                    setMsg('Check your email for a reset link!');
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            if (showForgotPassword) {
+                return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
+                    h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
+                        h('div', { className: 'text-center mb-8' },
+                            h('div', { className: 'text-5xl mb-3' }, '🔒'),
+                            h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Reset Password'),
+                            h('p', { className: 'text-gray-600' }, 'Enter your email to receive a reset link')
+                        ),
+                        error && h('div', { className: 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm' }, error),
+                        msg && h('div', { className: 'bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm' }, msg),
+                        h('form', { onSubmit: handleResetPassword, className: 'space-y-4' },
+                            h('div', {},
+                                h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
+                                h('input', {
+                                    type: 'email',
+                                    value: email,
+                                    onChange: e => setEmail(e.target.value),
+                                    required: true,
+                                    className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
+                                    placeholder: 'your@email.com'
+                                })
+                            ),
+                            h('button', {
+                                type: 'submit',
+                                disabled: loading,
+                                className: 'w-full gradient-bg text-white py-3 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium text-lg'
+                            }, loading ? 'Sending...' : 'Send Reset Link'),
+                            h('div', { className: 'text-center mt-6' },
+                                h('button', {
+                                    type: 'button',
+                                    onClick: () => { setShowForgotPassword(false); setError(''); setMsg(''); },
+                                    className: 'text-purple-600 hover:text-purple-700 text-sm font-medium'
+                                }, 'Back to Login')
+                            )
+                        )
+                    )
+                );
+            }
+            
             return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
                 h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
                     h('div', { className: 'text-center mb-8' },
@@ -299,6 +523,7 @@
                         h('p', { className: 'text-gray-600' }, isLogin ? 'Welcome back!' : 'Get started for free')
                     ),
                     error && h('div', { className: 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm' }, error),
+                    msg && h('div', { className: 'bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm' }, msg),
                     h('form', { onSubmit: handleAuth, className: 'space-y-4' },
                         h('div', {},
                             h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Email'),
@@ -321,7 +546,14 @@
                                 minLength: 6,
                                 className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
                                 placeholder: '••••••••'
-                            })
+                            }),
+                            isLogin && h('div', { className: 'text-right mt-2' },
+                                h('button', {
+                                    type: 'button',
+                                    onClick: () => { setShowForgotPassword(true); setError(''); setMsg(''); },
+                                    className: 'text-sm text-purple-600 hover:text-purple-800 transition'
+                                }, 'Forgot Password?')
+                            )
                         ),
                         isLogin && h('div', { className: 'flex items-center' },
                             h('input', {
@@ -638,6 +870,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [categoryFormData, setCategoryFormData] = useState({name:'',description:'',default_hsn:'33074100',has_mrp:false});
             const [editingCategory, setEditingCategory] = useState(null);
             const [categoryFilter, setCategoryFilter] = useState(_savedUI.categoryFilter || '');
+            const [isEditMode, setIsEditMode] = useState(false);
             
             // Expert cache — in-memory layer (survives re-renders, cleared on logout)
             const memCacheRef = useRef({});
@@ -651,10 +884,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             
             // Auto-save invoice to localStorage whenever invoice data changes
             useEffect(() => {
-                if (view === 'invoice' && selectedCategory) {
+                if (view === 'invoice' && selectedCategory && !isEditMode) {
                     saveInvoiceToCache();
                 }
-            }, [items, custName, custAddr, custGST, custPhone, invNum, invDate, taxInc, discount, discountAmount, selectedCategory]);
+            }, [items, custName, custAddr, custGST, custPhone, invNum, invDate, taxInc, discount, discountAmount, selectedCategory, isEditMode]);
 
             // Recalculate dropdown position when user scrolls so it tracks the input
             useEffect(() => {
@@ -721,6 +954,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             };
             
             const loadCachedInvoice = () => {
+                if (editingInvoiceId) return;
                 try {
                     const cached = localStorage.getItem('invoiceInProgress_' + user.id);
                     if (cached) {
@@ -1183,6 +1417,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
                 
                 setEditingInvoiceId(null);
+                setIsEditMode(false);
                 // Smart invalidation: flush only the data that changed, not everything
                 invalidateCache('invoices', 'customers', 'products');
                 await Promise.all([loadInvoices(), loadCustomers(), loadProducts(), generateNextInvoiceNumber()]);
@@ -1445,9 +1680,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('h3',{className:'text-xl font-bold gradient-text'},selectedCategory.name)
                                 ),
                                 h('div',{className:'flex flex-wrap gap-2 md:gap-4'},
-                                    h('button',{onClick:async()=>{await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);setEditingInvoiceId(null);clearInvoiceCache()},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🆕 New'),
+                                    h('button',{onClick:async()=>{setIsEditMode(false);setEditingInvoiceId(null);clearInvoiceCache();await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🆕 New'),
                                     h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:opacity-90 transition font-semibold text-sm md:text-base'},'💾 Save'),
-                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🖨 Print')
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate,items.filter(i=>i.name).length)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🖨 Print')
                                 )
                             ),
                             h('div',{className:'flex items-center gap-3'},
@@ -1658,8 +1893,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     ),
                                     h('td',{className:'border border-gray-300 p-4'},
                                         h('div',{className:'flex gap-2 justify-center flex-wrap'},
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>printWithFilename(inv.customer.name,inv.invoiceNumber,inv.date),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setEditingInvoiceId(inv.id);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'✏️ Edit'),
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>printWithFilename(inv.customer.name,inv.invoiceNumber,inv.date,inv.items.length),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
+                                            h('button',{onClick:()=>{clearInvoiceCache();setIsEditMode(true);setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setEditingInvoiceId(inv.id);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'✏️ Edit'),
                                             h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
                                             h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
                                         )
@@ -1718,13 +1953,13 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 ),
                 
                 // Print Container
-                h('div',{className:'print-container'+(items.filter(i=>i.name).length<=5?' small-invoice':'')},
+                h('div',{className:'print-container'+(items.filter(i=>i.name).length<=6?' small-invoice':''),style:{pageBreakAfter:items.filter(i=>i.name).length<=6?'auto':'always'}},
                     h('div',{className:'print-header'},
                         h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'20px'}},
-                            h('div',{},h('h1',{style:{fontSize:'24px',fontWeight:'bold',margin:'0 0 10px 0'}},config?.name||'Business Name'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},config?.address||''),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+(config?.gstin||'')),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+(config?.phone||'')),h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Email: '+(config?.email||''))),
-                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'20px',fontWeight:'bold',margin:'0 0 10px 0'}},taxInc?'TAX INVOICE':'INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},'Date: '),invDate))
+                            h('div',{},h('h1',{style:{fontSize:'28px',fontWeight:'bold',margin:'0 0 10px 0'}},config?.name||'Business Name'),h('p',{style:{margin:'2px 0',fontSize:'13px'}},config?.address||''),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'GSTIN: '+(config?.gstin||'')),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'Phone: '+(config?.phone||'')),h('p',{style:{margin:'2px 0',fontSize:'13px'}},'Email: '+(config?.email||''))),
+                            h('div',{style:{textAlign:'right'}},h('h2',{style:{fontSize:'22px',fontWeight:'bold',margin:'0 0 10px 0'}},taxInc?'TAX INVOICE':'INVOICE'),h('p',{style:{margin:'2px 0',fontSize:'13px'}},h('strong',{},'Invoice #: '),invNum),h('p',{style:{margin:'2px 0',fontSize:'13px'}},h('strong',{},'Date: '),invDate))
                         ),
-                        h('div',{style:{marginBottom:'20px',padding:'10px',border:'1px solid #000'}},h('h3',{style:{fontSize:'14px',fontWeight:'bold',margin:'0 0 5px 0'}},'Bill To:'),h('p',{style:{margin:'2px 0',fontSize:'12px'}},h('strong',{},custName)),h('p',{style:{margin:'2px 0',fontSize:'12px'}},custAddr),custPhone&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'Phone: '+custPhone),custGST&&h('p',{style:{margin:'2px 0',fontSize:'12px'}},'GSTIN: '+custGST))
+                        h('div',{style:{marginBottom:'20px',padding:'10px',border:'1px solid #000'}},h('h3',{style:{fontSize:'15px',fontWeight:'bold',margin:'0 0 5px 0'}},'Bill To:'),h('p',{style:{margin:'2px 0',fontSize:'13px'}},h('strong',{},custName)),h('p',{style:{margin:'2px 0',fontSize:'13px'}},custAddr),custPhone&&h('p',{style:{margin:'2px 0',fontSize:'13px'}},'Phone: '+custPhone),custGST&&h('p',{style:{margin:'2px 0',fontSize:'13px'}},'GSTIN: '+custGST))
                     ),
                     h('table',{className:'invoice-table'},
                         (()=>{const hasDisc=items.some(it=>it.name&&(parseFloat(it.discount)>0||parseFloat(it.discountAmount)>0));const hasMrp=!!selectedCategory?.has_mrp;const leftSpan=hasMrp?8:7;const rightSpan=(taxInc?2:1)+(hasDisc?1:0);return[
@@ -1737,10 +1972,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'₹'+tots.cg)),
                             taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'₹'+tots.sg)),
                             h('tr',{},h('td',{colSpan:leftSpan+rightSpan,style:{textAlign:'right',fontSize:'10px',color:'#555',paddingTop:'4px'}},'Total Qty: '+tots.tq)),
-                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'14px'}},'GRAND TOTAL:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'14px'}},'₹'+tots.gt))
+                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'₹'+tots.gt))
                         )];})()
                     ),
-                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'12px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'12px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'Bank: '+(config?.bankName||'')),config?.branchName&&h('p',{style:{fontSize:'11px',margin:'2px 0'}},'Branch: '+(config?.branchName||'')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'A/C: '+(config?.accountNo||'')),h('p',{style:{fontSize:'11px',margin:'2px 0'}},'IFSC: '+(config?.ifsc||''))),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'12px',margin:'2px 0'}},'For '+(config?.name||'Business')),h('div',{style:{height:'60px'}}),h('p',{style:{fontSize:'12px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'10px',marginTop:'8px',borderTop:'1px dashed #aaa',paddingTop:'6px',fontStyle:'italic'}},h('strong',{},'Terms: '),'Cheque Bouncing Charges ₹500. Thank you for your business!'))
+                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'13px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'13px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Bank: '+(config?.bankName||'')),config?.branchName&&h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Branch: '+(config?.branchName||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'A/C: '+(config?.accountNo||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'IFSC: '+(config?.ifsc||''))),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'13px',margin:'2px 0'}},'For '+(config?.name||'Business')),h('div',{className:'signature-gap',style:{height:'60px'}}),h('p',{style:{fontSize:'13px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'11px',marginTop:'8px',borderTop:'1px dashed #aaa',paddingTop:'6px',fontStyle:'italic'}},h('strong',{},'Terms: '),'Cheque Bouncing Charges ₹500. Thank you for your business!'))
                 )
             );
         };
@@ -1749,8 +1984,18 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
         const App = () => {
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
+            const [resetToken, setResetToken] = useState(null);
+            const [newPassword, setNewPassword] = useState('');
+            const [confirmPassword, setConfirmPassword] = useState('');
+            const [resetError, setResetError] = useState('');
+            const [resetLoading, setResetLoading] = useState(false);
             
             useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('reset') === '1') {
+                    setResetToken(true);
+                }
+                
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     setUser(session?.user ?? null);
                     setLoading(false);
@@ -1763,6 +2008,27 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 return () => subscription.unsubscribe();
             }, []);
             
+            const handleUpdatePassword = async (e) => {
+                e.preventDefault();
+                setResetError('');
+                if (newPassword !== confirmPassword) {
+                    setResetError('Passwords do not match');
+                    return;
+                }
+                setResetLoading(true);
+                try {
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+                    if (error) throw error;
+                    alert('Password updated successfully!');
+                    setResetToken(null);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (err) {
+                    setResetError(err.message);
+                } finally {
+                    setResetLoading(false);
+                }
+            };
+            
             const handleLogout = async () => {
                 await supabase.auth.signOut();
                 localStorage.removeItem('rememberMe');
@@ -1774,6 +2040,29 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('div', { className: 'text-center' },
                         h('div', { className: 'loader mx-auto mb-4' }),
                         h('p', { className: 'text-white text-lg' }, 'Loading...')
+                    )
+                );
+            }
+            
+            if (resetToken) {
+                return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
+                    h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
+                        h('h1', { className: 'text-3xl font-bold text-gray-800 mb-6 text-center' }, 'Set New Password'),
+                        resetError && h('div', { className: 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm' }, resetError),
+                        h('form', { onSubmit: handleUpdatePassword, className: 'space-y-4' },
+                            h('div', {},
+                                h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'New Password'),
+                                h('input', { type: 'password', value: newPassword, onChange: e => setNewPassword(e.target.value), required: true, minLength: 6, className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500' })
+                            ),
+                            h('div', {},
+                                h('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Confirm Password'),
+                                h('input', { type: 'password', value: confirmPassword, onChange: e => setConfirmPassword(e.target.value), required: true, minLength: 6, className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500' })
+                            ),
+                            h('button', { type: 'submit', disabled: resetLoading, className: 'w-full gradient-bg text-white py-3 px-4 rounded-lg hover:opacity-90 transition font-medium' }, resetLoading ? 'Updating...' : 'Update Password'),
+                            h('div', { className: 'text-center mt-4' },
+                                h('button', { type: 'button', onClick: () => { setResetToken(null); window.history.replaceState({}, document.title, window.location.pathname); }, className: 'text-purple-600 hover:text-purple-700 text-sm font-medium' }, 'Back to Login')
+                            )
+                        )
                     )
                 );
             }
