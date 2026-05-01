@@ -91,7 +91,7 @@ The app is fully optimized for mobile use — add it to your home screen for a n
 | Expert cache (in-memory + localStorage) | ✅ Live |
 | Multi-device sync | ✅ Live |
 | Invoice draft auto-saved to localStorage | ✅ Live |
-| Offline mode (Service Worker / PWA shell caching) | 🔜 Planned |
+| Offline mode (Service Worker / PWA shell caching) | ✅ Live |
 
 Data is synced in real-time using the Supabase JS client connected to a NeonDB PostgreSQL database. An expert cache layer shows stale data instantly while fresh data loads silently in the background (SWR pattern).
 

@@ -382,6 +382,76 @@
             border-bottom: none;
         }
 
+        /* ── MOBILE INVOICE CARDS ── */
+        .mobile-item-card {
+            background: #fff;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .mobile-item-card .card-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .mobile-item-card input, .mobile-item-card select {
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 14px;
+            outline: none;
+            width: 100%;
+            background: #fafafa;
+            transition: border-color 0.15s;
+        }
+        .mobile-item-card input:focus, .mobile-item-card select:focus {
+            border-color: #7c3aed;
+            background: #fff;
+        }
+
+        /* ── STICKY INVOICE TOTAL BAR (mobile) ── */
+        .sticky-total-bar {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .sticky-total-bar {
+                display: flex;
+                position: fixed;
+                bottom: 64px; /* above bottom nav */
+                left: 0; right: 0;
+                background: linear-gradient(135deg, #7c3aed, #2563eb);
+                color: #fff;
+                padding: 10px 16px;
+                align-items: center;
+                justify-content: space-between;
+                z-index: 45;
+                box-shadow: 0 -2px 16px rgba(124,58,237,0.25);
+            }
+            .sticky-total-bar .total-label { font-size: 12px; opacity: 0.85; }
+            .sticky-total-bar .total-amount { font-size: 20px; font-weight: 800; }
+            .sticky-total-bar .save-btn {
+                background: #fff;
+                color: #7c3aed;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-weight: 700;
+                font-size: 13px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            /* hide desktop invoice table on mobile */
+            .desktop-invoice-table { display: none !important; }
+            /* show mobile card view */
+            .mobile-invoice-view { display: block !important; }
+        }
+        @media (min-width: 769px) {
+            .mobile-invoice-view { display: none !important; }
+            .desktop-invoice-table { display: block; }
+        }
+
         /* Enhanced Gradients & Effects */
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -2504,7 +2574,86 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     ),
                                     h('div', { className: 'mb-6' },
                                         h('h3', { className: 'font-bold mb-4 text-lg text-gray-800' }, 'Invoice Items'),
-                                        h('div', { className: 'mobile-scroll overflow-x-auto shadow-md rounded-lg', style: { overflowY: 'visible' } },
+
+                                        // ── MOBILE CARD VIEW (shown only on ≤768px) ──
+                                        h('div', { className: 'mobile-invoice-view' },
+                                            items.map((it, idx) => {
+                                                const c = calcLine(it);
+                                                const q = it.name || '';
+                                                const pool = prods.filter(p => !selectedCategory || !p.category_id || p.category_id === selectedCategory.id);
+                                                const fuse = typeof Fuse !== 'undefined' && q ? new Fuse(pool, { keys: ['name'], threshold: 0.4 }) : null;
+                                                const suggestions = fuse ? [...fuse.search(q).map(r => r.item), ...pool.filter(p => p.name.toLowerCase().includes(q.toLowerCase()))].filter((v, i, a) => a.findIndex(x => x.id === v.id) === i).slice(0, 5) : [];
+                                                return h('div', { key: it.id, className: 'mobile-item-card' },
+                                                    h('div', { className: 'flex justify-between items-center mb-2' },
+                                                        h('span', { className: 'text-xs font-bold text-gray-400 uppercase' }, 'Item ' + (idx + 1)),
+                                                        h('div', { className: 'flex items-center gap-2' },
+                                                            h('span', { className: 'text-sm font-bold text-purple-700' }, '₹' + c.tot),
+                                                            items.length > 1 && h('button', { onClick: () => setItems(items.filter(i => i.id !== it.id)), className: 'text-red-400 hover:text-red-600 text-lg leading-none' }, '✕')
+                                                        )
+                                                    ),
+                                                    // Item name + suggestions
+                                                    h('div', { className: 'relative mb-2' },
+                                                        h('input', { type: 'text', value: it.name, placeholder: 'Product name…', 'data-item-id': it.id,
+                                                            onBlur: () => setTimeout(() => { setItemDropdown({ id: null, top: 0, left: 0, width: 300 }); setDropdownHighlight(-1); }, 180),
+                                                            onKeyDown: e => {
+                                                                const list = suggestions;
+                                                                if (e.key === 'ArrowDown') { e.preventDefault(); setDropdownHighlight(h => Math.min(h + 1, list.length - 1)); }
+                                                                else if (e.key === 'ArrowUp') { e.preventDefault(); setDropdownHighlight(h => Math.max(h - 1, 0)); }
+                                                                else if (e.key === 'Enter' && dropdownHighlight >= 0 && list[dropdownHighlight]) { e.preventDefault(); const p = list[dropdownHighlight]; setItems(items.map(i => i.id === it.id ? { ...i, name: p.name, rate: p.rate, mrp: p.mrp || 0, hsn: p.hsn || i.hsn } : i)); setItemDropdown({ id: null, top: 0, left: 0, width: 300 }); setDropdownHighlight(-1); }
+                                                                else if (e.key === 'Escape') { setItemDropdown({ id: null, top: 0, left: 0, width: 300 }); setDropdownHighlight(-1); }
+                                                            },
+                                                            onChange: e => { const v = e.target.value; const rect = e.target.getBoundingClientRect(); setItemDropdown({ id: it.id, top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) }); setDropdownHighlight(-1); setItems(items.map(i => i.id === it.id ? { ...i, name: v } : i)); const p = prods.find(x => x.name.toLowerCase() === v.toLowerCase()); if (p) { setItems(items.map(i => i.id === it.id ? { ...i, name: p.name, rate: p.rate, mrp: p.mrp || 0, hsn: p.hsn || i.hsn } : i)); setItemDropdown({ id: null, top: 0, left: 0, width: 300 }); setDropdownHighlight(-1); } },
+                                                            className: 'w-full', style: { fontSize: '15px', fontWeight: 600 } }),
+                                                        itemDropdown.id === it.id && suggestions.length > 0 && h('div', { style: { position: 'fixed', top: itemDropdown.top, left: itemDropdown.left, width: itemDropdown.width, zIndex: 999999, boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }, className: 'bg-white border-2 border-purple-400 rounded-xl overflow-hidden' },
+                                                            suggestions.map((p, i) => h('div', { key: p.id || i, onMouseDown: e => { e.preventDefault(); setItems(items.map(im => im.id === it.id ? { ...im, name: p.name, rate: p.rate, mrp: p.mrp || 0, hsn: p.hsn || im.hsn } : im)); setItemDropdown({ id: null, top: 0, left: 0, width: 300 }); setDropdownHighlight(-1); }, className: 'dropdown-item' + (i === dropdownHighlight ? ' highlighted' : '') },
+                                                                h('span', { className: 'font-medium text-gray-800 text-sm' }, p.name),
+                                                                h('span', { className: 'text-purple-600 font-bold text-sm' }, '₹' + p.rate)
+                                                            ))
+                                                        )
+                                                    ),
+                                                    // Qty / Rate / Unit row
+                                                    h('div', { className: 'card-row mb-2' },
+                                                        h('div', { style: { flex: 1 } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'Qty'),
+                                                            h('input', { type: 'number', value: it.qty, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, qty: e.target.value } : i)), style: { textAlign: 'center' } })
+                                                        ),
+                                                        h('div', { style: { flex: 1 } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'Rate (₹)'),
+                                                            h('input', { type: 'number', value: it.rate, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, rate: e.target.value } : i)), step: 0.01, style: { textAlign: 'right' } })
+                                                        ),
+                                                        h('div', { style: { width: '80px' } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'Unit'),
+                                                            h('select', { value: it.unit, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, unit: e.target.value } : i)) },
+                                                                h('option', { value: 'Pcs' }, 'Pcs'),
+                                                                h('option', { value: 'Dozen' }, 'Dozen'),
+                                                                h('option', { value: 'Gross' }, 'Gross'),
+                                                                h('option', { value: 'Kg' }, 'Kg'),
+                                                                h('option', { value: 'Ltr' }, 'Ltr')
+                                                            )
+                                                        )
+                                                    ),
+                                                    // Discount row (collapsible feel — only show if non-zero)
+                                                    h('div', { className: 'card-row' },
+                                                        h('div', { style: { flex: 1 } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'Disc %'),
+                                                            h('input', { type: 'number', value: it.discount || 0, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, discount: e.target.value } : i)), min: 0, max: 100, step: 0.01 })
+                                                        ),
+                                                        selectedCategory?.has_mrp && h('div', { style: { flex: 1 } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'MRP'),
+                                                            h('input', { type: 'number', value: it.mrp || 0, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, mrp: e.target.value } : i)), step: 0.01 })
+                                                        ),
+                                                        h('div', { style: { flex: 1 } },
+                                                            h('div', { style: { fontSize: '10px', fontWeight: 700, color: '#9ca3af', marginBottom: '3px', textTransform: 'uppercase' } }, 'Free Qty'),
+                                                            h('input', { type: 'number', value: it.freeQty || 0, onChange: e => setItems(items.map(i => i.id === it.id ? { ...i, freeQty: e.target.value } : i)), min: 0 })
+                                                        )
+                                                    )
+                                                );
+                                            }),
+                                            h('button', { onClick: () => setItems([...items, { id: Date.now(), name: '', hsn: selectedCategory?.default_hsn || '33074100', qty: 1, unit: 'Pcs', rate: 0, mrp: 0, freeQty: 0, freeUnit: 'Pcs', discount: 0, discountAmount: 0 }]), className: 'w-full mt-2 py-3 border-2 border-dashed border-purple-300 text-purple-600 font-bold rounded-xl text-sm hover:bg-purple-50 transition' }, '+ Add Another Item')
+                                        ),
+
+                                        // ── DESKTOP TABLE (hidden on ≤768px) ──
+                                        h('div', { className: 'desktop-invoice-table mobile-scroll overflow-x-auto shadow-md rounded-lg', style: { overflowY: 'visible' } },
                                             h('table', { className: 'w-full border-collapse min-w-[800px]' },
                                                 h('thead', {}, h('tr', { className: 'gradient-bg text-white' },
                                                     h('th', { className: 'border border-gray-300 p-2 md:p-3 text-left text-xs md:text-sm' }, '#'),
@@ -2594,6 +2743,15 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 )
                                             );
                                         })())
+                                        ) // close desktop-invoice-table div
+                                    ),
+                                    // ── STICKY TOTAL BAR (mobile only, above bottom nav) ──
+                                    selectedCategory && h('div', { className: 'sticky-total-bar no-print' },
+                                        h('div', {},
+                                            h('div', { className: 'total-label' }, taxInc ? 'Grand Total (GST incl.)' : 'Grand Total'),
+                                            h('div', { className: 'total-amount' }, '₹' + tots.gt)
+                                        ),
+                                        h('button', { className: 'save-btn', onClick: saveInvoice }, '💾 Save & Print')
                                     ),
                                     h('div', { className: 'grid grid-cols-2 gap-6' },
                                         h('div', { className: 'p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl' },
@@ -2896,6 +3054,45 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
 
             render(h(App), document.getElementById('root'));
 
+        })();
+    </script>
+
+    <!-- Service Worker registration + offline indicator -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('[SW] Registered, scope:', reg.scope);
+                }).catch(err => {
+                    console.warn('[SW] Registration failed:', err);
+                });
+            });
+        }
+
+        // Offline / online banner
+        (function() {
+            function showOfflineBanner(show) {
+                let el = document.getElementById('offline-banner');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'offline-banner';
+                    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;text-align:center;padding:6px 12px;font-size:13px;font-weight:600;color:#fff;transition:transform 0.3s ease;';
+                    document.body.appendChild(el);
+                }
+                if (show) {
+                    el.textContent = '📶 You are offline — data will sync when connection is restored';
+                    el.style.background = '#dc2626';
+                    el.style.transform = 'translateY(0)';
+                } else {
+                    el.textContent = '✅ Back online — syncing…';
+                    el.style.background = '#16a34a';
+                    el.style.transform = 'translateY(0)';
+                    setTimeout(() => { el.style.transform = 'translateY(-100%)'; }, 2500);
+                }
+            }
+            window.addEventListener('offline', () => showOfflineBanner(true));
+            window.addEventListener('online', () => showOfflineBanner(false));
+            if (!navigator.onLine) showOfflineBanner(true);
         })();
     </script>
 </body>
