@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -2767,8 +2767,28 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 )
                                             ),
                                             h('p', { className: 'text-xs text-gray-600 mt-2 italic' }, 'If amount is entered, it will be used (% will be ignored)')
+                                        ),
+                                        h('div', { className: 'p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl' },
+                                            h('h3', { className: 'font-bold mb-3 text-lg text-gray-800' }, 'Summary'),
+                                            h('p', { className: 'text-gray-700 mb-1 text-sm' }, 'Subtotal: ' + String.fromCharCode(8377) + tots.sub),
+                                            h('p', { className: 'text-gray-700 mb-1 text-sm' }, 'Tax: ' + String.fromCharCode(8377) + (parseFloat(tots.cg)+parseFloat(tots.sg)).toFixed(2)),
+                                            h('p', { className: 'text-2xl font-bold text-purple-700 mt-3' }, String.fromCharCode(8377) + tots.gt),
+                                            h('p', { className: 'text-xs text-gray-500 mt-1' }, tots.words)
+                                        )
                                     ),
-                                    h('div', { className: 'flex gap-2 mb-6 flex-wrap' },
+                                    h('div', { className: 'flex flex-wrap gap-4 mt-6' },
+                                        h('button', { onClick: saveInvoice, className: 'gradient-bg text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition' }, String.fromCharCode(128190) + ' Save & Print'),
+                                        isEditMode && h('button', { onClick: () => { setIsEditMode(false); setEditingInvoiceId(null); clearInvoiceCache(); }, className: 'bg-gray-400 hover:bg-gray-500 text-white px-6 py-3 rounded-xl font-bold transition' }, String.fromCharCode(10005) + ' Cancel Edit')
+                                    )
+                                ) : view === 'stock' ? h('div', { className: 'bg-white rounded-xl shadow-lg p-4 md:p-8' },
+                                    h('div', { className: 'flex justify-between items-center mb-4' },
+                                        h('h2', { className: 'text-2xl md:text-3xl font-bold gradient-text' }, 'Products'),
+                                        h('button', { onClick: () => { setShowStockForm(true); setStockFormData({ name: '', rate: 0, mrp: 0, hsn: '', category_id: stockCategoryFilter !== 'all' ? stockCategoryFilter : '' }); }, className: 'gradient-bg text-white px-4 py-2 rounded-lg transition font-semibold text-sm md:text-base' }, '+ Add Product')
+                                    ),
+                                    h('div', { className: 'mb-3' },
+                                        h('input', { type: 'text', placeholder: 'Search products...', value: productSearch, onChange: e => setProductSearch(e.target.value), className: 'w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition' })
+                                    ),
+                                    h('div', { className: 'flex gap-2 mb-4 flex-wrap' },
                                         h('button', { onClick: () => setStockCategoryFilter('all'), className: 'px-4 py-2 rounded-lg font-semibold transition ' + (stockCategoryFilter === 'all' ? 'gradient-bg text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200') }, 'All (' + stock.length + ')'),
                                         categories.map(cat => h('button', { key: cat.id, onClick: () => setStockCategoryFilter(cat.id), className: 'px-4 py-2 rounded-lg font-semibold transition ' + (stockCategoryFilter === cat.id ? 'gradient-bg text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200') }, cat.name + ' (' + stock.filter(p => p.category_id === cat.id).length + ')'))
                                     ),
