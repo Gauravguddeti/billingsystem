@@ -7,6 +7,7 @@ export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +19,7 @@ export default function SignInPage() {
     let authError: any = null;
     
     try {
-      const { error } = await authClient.signIn.email({ email, password });
+      const { error } = await authClient.signIn.email({ email, password, rememberMe });
       authError = error;
     } catch (e: any) {
       authError = e;
@@ -43,15 +44,15 @@ export default function SignInPage() {
           if (migrateRes.ok) {
             // Migration succeeded — now sign in properly via Neon Auth
             try {
-              const { error: retryError } = await authClient.signIn.email({ email, password });
+              const { error: retryError } = await authClient.signIn.email({ email, password, rememberMe });
               if (retryError) {
-                setError('Migration done but sign in failed — try again');
+                setError(`Migration done but sign in failed: ${retryError.message || JSON.stringify(retryError)}`);
               } else {
                 router.push('/');
                 router.refresh();
               }
             } catch (retryE: any) {
-              setError('Migration done but sign in failed — try again');
+              setError(`Migration done but sign in failed (exception): ${retryE.message || JSON.stringify(retryE)}`);
             }
           } else {
             // Migration failed = genuinely wrong credentials
@@ -96,6 +97,18 @@ export default function SignInPage() {
               className="w-full mt-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
               required
             />
+          </div>
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-700 bg-gray-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+              Remember me
+            </label>
           </div>
           <button
             type="submit" disabled={loading}

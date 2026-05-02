@@ -54,7 +54,7 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
           /* Half-page (≤5 items) */
           .small-invoice { display: flex !important; flex-direction: column !important;
             min-height: 100mm; box-sizing: border-box; border-bottom: 1px dashed #888;
-            padding-bottom: 2mm; margin-bottom: 2mm; page-break-after: always; }
+            padding-bottom: 2mm; margin-bottom: 2mm; }
           .small-invoice .print-footer { margin-top: auto !important; padding-top: 5px !important; }
           .small-invoice h1 { font-size: 17px !important; margin: 0 0 3px 0 !important; }
           .small-invoice h2 { font-size: 15px !important; margin: 0 0 3px 0 !important; }
