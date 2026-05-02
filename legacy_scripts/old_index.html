@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,7 +12,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
         
-        /* ── PRINT STYLES ─────────────────────────────────────────────── */
+        /* ΓöÇΓöÇ PRINT STYLES ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
         @page { size: A4 portrait; margin: 0; }
         @media print {
             .no-print { display: none !important; }
@@ -56,7 +56,7 @@
             h1, h2, h3 { margin: 4px 0; }
             p { margin: 2px 0; }
 
-            /* ── HALF-PAGE invoice (≤ 5 items) ──
+            /* ΓöÇΓöÇ HALF-PAGE invoice (Γëñ 5 items) ΓöÇΓöÇ
                Fills exactly half an A4 sheet.
                CSS font sizes override inline styles once JS strips them. */
             .small-invoice {
@@ -376,7 +376,7 @@
         const getCurrentDate = () => new Date().toISOString().split('T')[0];
         
         // Helper to set document title for PDF filename
-        // Groq Vision — assembled at runtime to avoid static scanning
+        // Groq Vision ΓÇö assembled at runtime to avoid static scanning
         const GROQ_API_KEY = 'gsk_V15WTQn0juFEzdXUBD' + 'HrWGdyb3FYgbhja7GTKywvVIwJzNfK460i';
         const GROQ_MODEL   = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
@@ -454,7 +454,7 @@
                     } else {
                         const { data, error } = await supabase.auth.signUp({ email, password });
                         if (error) throw error;
-                        // Account created immediately — no email verification needed
+                        // Account created immediately ΓÇö no email verification needed
                         setMsg('Account created! You can now log in.');
                         setIsLogin(true);
                         setPassword('');
@@ -567,7 +567,7 @@
                 return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
                     h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
                         h('div', { className: 'text-center mb-8' },
-                            h('div', { className: 'text-5xl mb-3' }, '🔒'),
+                            h('div', { className: 'text-5xl mb-3' }, '≡ƒöÆ'),
                             h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Reset Password'),
                             h('p', { className: 'text-gray-600' }, 'Enter your email to receive a reset link')
                         ),
@@ -609,7 +609,7 @@
                                         required: true,
                                         minLength: 6,
                                         className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
-                                        placeholder: '••••••••'
+                                        placeholder: 'ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó'
                                     })
                                 ),
                                 h('div', {},
@@ -621,7 +621,7 @@
                                         required: true,
                                         minLength: 6,
                                         className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
-                                        placeholder: '••••••••'
+                                        placeholder: 'ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó'
                                     })
                                 )
                             ),
@@ -645,7 +645,7 @@
             return h('div', { className: 'min-h-screen flex items-center justify-center gradient-bg p-4' },
                 h('div', { className: 'bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md' },
                     h('div', { className: 'text-center mb-8' },
-                        h('div', { className: 'text-5xl mb-3' }, '💼'),
+                        h('div', { className: 'text-5xl mb-3' }, '≡ƒÆ╝'),
                         h('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Smart GST Billing'),
                         h('p', { className: 'text-gray-600' }, isLogin ? 'Welcome back!' : 'Get started for free')
                     ),
@@ -672,7 +672,7 @@
                                 required: true,
                                 minLength: 6,
                                 className: 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',
-                                placeholder: '••••••••'
+                                placeholder: 'ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó'
                             }),
                             isLogin && h('div', { className: 'text-right mt-2' },
                                 h('button', {
@@ -754,15 +754,15 @@
                 
                 return `Business Data Summary:
 - Total Invoices: ${invoices.length}
-- Total Revenue: ₹${totalRevenue.toFixed(2)}
+- Total Revenue: Γé╣${totalRevenue.toFixed(2)}
 - Paid Invoices: ${paidInvoices.length}
 - Unpaid Invoices: ${unpaidInvoices.length}
 - Total Customers: ${customers.length}
 - Total Products: ${products.length}
-- Top 5 Customers: ${sortedCustomers.map(([name, amt]) => `${name} (₹${amt.toFixed(2)})`).join(', ')}
+- Top 5 Customers: ${sortedCustomers.map(([name, amt]) => `${name} (Γé╣${amt.toFixed(2)})`).join(', ')}
 
 Recent Invoices:
-${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.customer.name}, ₹${inv.totals.gt}, ${inv.payment_status}`).join('\n')}`;
+${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.customer.name}, Γé╣${inv.totals.gt}, ${inv.payment_status}`).join('\n')}`;
             };
             
             const sendMessage = async () => {
@@ -838,7 +838,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             onClick: sendMessage,
                             disabled: !input.trim() || loading,
                             className: 'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 font-medium'
-                        }, '➤')
+                        }, 'Γ₧ñ')
                     )
                 )
             );
@@ -894,7 +894,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        callback: value => '₹' + value.toLocaleString()
+                                        callback: value => 'Γé╣' + value.toLocaleString()
                                     }
                                 }
                             }
@@ -918,10 +918,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 // Stats Cards
                 h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6' },
                     [
-                        { title: 'Total Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: '💰', color: 'from-blue-500 to-blue-600' },
-                        { title: 'Paid', value: `₹${paidRevenue.toLocaleString()}`, icon: '✅', color: 'from-green-500 to-green-600' },
-                        { title: 'Pending', value: `₹${(unpaidRevenue + partialRevenue).toLocaleString()}`, icon: '⏳', color: 'from-yellow-500 to-yellow-600' },
-                        { title: 'Total Invoices', value: invoices.length, icon: '📄', color: 'from-purple-500 to-purple-600' }
+                        { title: 'Total Revenue', value: `Γé╣${totalRevenue.toLocaleString()}`, icon: '≡ƒÆ░', color: 'from-blue-500 to-blue-600' },
+                        { title: 'Paid', value: `Γé╣${paidRevenue.toLocaleString()}`, icon: 'Γ£à', color: 'from-green-500 to-green-600' },
+                        { title: 'Pending', value: `Γé╣${(unpaidRevenue + partialRevenue).toLocaleString()}`, icon: 'ΓÅ│', color: 'from-yellow-500 to-yellow-600' },
+                        { title: 'Total Invoices', value: invoices.length, icon: '≡ƒôä', color: 'from-purple-500 to-purple-600' }
                     ].map((stat, idx) =>
                         h('div', { key: idx, className: 'bg-white rounded-xl shadow-lg p-6 card-hover' },
                             h('div', { className: 'flex items-center justify-between' },
@@ -937,7 +937,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 // Revenue Chart
                 h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
-                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '📈 Revenue Trend'),
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '≡ƒôê Revenue Trend'),
                     h('div', { style: { height: '300px' } },
                         h('canvas', { ref: chartRef })
                     )
@@ -945,7 +945,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 
                 // Top Customers
                 h('div', { className: 'bg-white rounded-xl shadow-lg p-6' },
-                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '🌟 Top Customers'),
+                    h('h3', { className: 'text-xl font-bold text-gray-800 mb-4' }, '≡ƒîƒ Top Customers'),
                     h('div', { className: 'space-y-3' },
                         sortedCustomers.length === 0 ? 
                         h('p', { className: 'text-gray-500 text-center py-8' }, 'No customer data yet') :
@@ -955,7 +955,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div', { className: 'w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold' }, (idx + 1)),
                                     h('span', { className: 'font-medium text-gray-800' }, name)
                                 ),
-                                h('span', { className: 'font-bold text-purple-600' }, `₹${amount.toLocaleString()}`)
+                                h('span', { className: 'font-bold text-purple-600' }, `Γé╣${amount.toLocaleString()}`)
                             )
                         )
                     )
@@ -1023,7 +1023,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             const [categoryFilter, setCategoryFilter] = useState(_savedUI.categoryFilter || '');
             const [isEditMode, setIsEditMode] = useState(false);
             
-            // Expert cache — in-memory layer (survives re-renders, cleared on logout)
+            // Expert cache ΓÇö in-memory layer (survives re-renders, cleared on logout)
             const memCacheRef = useRef({});
             const inFlightRef = useRef({});
             
@@ -1071,7 +1071,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             useEffect(() => {
                 const onVisible = () => {
                     if (document.visibilityState === 'visible') {
-                        // Re-run loaders — they'll serve the in-memory cache instantly
+                        // Re-run loaders ΓÇö they'll serve the in-memory cache instantly
                         // and only fire a network request if the TTL has expired
                         loadInvoices();
                         loadProducts();
@@ -1144,23 +1144,23 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 }
             };
             
-            // ── Expert Cache System ─────────────────────────────────────────────
+            // ΓöÇΓöÇ Expert Cache System ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             // Inspired by Google/Microsoft SWR patterns:
-            //   • Two-tier: memory (instant) → localStorage (persistent across refreshes)
-            //   • Versioned keys: old structure auto-expires on deploy
-            //   • Tiered TTLs per data type (rare data lives longer)
-            //   • Request deduplication: same fetch won't fire twice in parallel
-            //   • Stale-While-Revalidate: show cached instantly, refresh silently
-            //   • Smart invalidation: only dirty the key that changed
-            //   • Graceful quota handling: evict heaviest entry and retry
-            // ────────────────────────────────────────────────────────────────────
+            //   ΓÇó Two-tier: memory (instant) ΓåÆ localStorage (persistent across refreshes)
+            //   ΓÇó Versioned keys: old structure auto-expires on deploy
+            //   ΓÇó Tiered TTLs per data type (rare data lives longer)
+            //   ΓÇó Request deduplication: same fetch won't fire twice in parallel
+            //   ΓÇó Stale-While-Revalidate: show cached instantly, refresh silently
+            //   ΓÇó Smart invalidation: only dirty the key that changed
+            //   ΓÇó Graceful quota handling: evict heaviest entry and retry
+            // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             const CACHE_VERSION = 'v4';
             const CACHE_TTLS = {
-                profile:    30 * 60 * 1000,  // 30 min — rarely changes
-                categories: 30 * 60 * 1000,  // 30 min — rarely changes
-                products:   15 * 60 * 1000,  // 15 min — changed occasionally
+                profile:    30 * 60 * 1000,  // 30 min ΓÇö rarely changes
+                categories: 30 * 60 * 1000,  // 30 min ΓÇö rarely changes
+                products:   15 * 60 * 1000,  // 15 min ΓÇö changed occasionally
                 customers:  10 * 60 * 1000,  // 10 min
-                invoices:    3 * 60 * 1000   //  3 min — changes frequently
+                invoices:    3 * 60 * 1000   //  3 min ΓÇö changes frequently
             };
 
             // Build a versioned localStorage key
@@ -1193,7 +1193,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 try {
                     localStorage.setItem(_cacheKey(key), JSON.stringify(entry));
                 } catch (err) {
-                    // QuotaExceededError — evict the heaviest cache entry (invoices) and retry
+                    // QuotaExceededError ΓÇö evict the heaviest cache entry (invoices) and retry
                     try {
                         localStorage.removeItem(_cacheKey('invoices'));
                         delete memCacheRef.current['invoices'];
@@ -1210,7 +1210,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 });
             };
 
-            // Full wipe — used on logout/account switch
+            // Full wipe ΓÇö used on logout/account switch
             const clearAllCache = () => {
                 memCacheRef.current = {};
                 try {
@@ -1253,7 +1253,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
             };
             
             // Wrap each loader with deduplication (SWR: show cache instantly, fetch fresh silently)
-            // Map a businesses DB row → config shape used throughout the app
+            // Map a businesses DB row ΓåÆ config shape used throughout the app
             const mapBiz = b => !b ? {} : ({
                 businessId: b.id,
                 name: b.name || '',
@@ -1283,7 +1283,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     setConfig(prev => prev?.businessId ? mapBiz(data.find(b => b.id === prev.businessId) || def) : mapBiz(def));
                     setCachedData('businesses', data);
                 } else if (!cached || cached.length === 0) {
-                    // No businesses yet — auto-create one from user_profiles fallback
+                    // No businesses yet ΓÇö auto-create one from user_profiles fallback
                     setConfig({ name:'', address:'', gstin:'', phone:'', email:user.email, bankName:'', branchName:'', accountNo:'', ifsc:'' });
                 }
             });
@@ -1314,9 +1314,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 if (data) { setCategories(data); setCachedData('categories', data); }
             });
 
-            // loadInvoices — fixed N+1: was 1 query per invoice for items (e.g. 50 invoices = 51 queries)
+            // loadInvoices ΓÇö fixed N+1: was 1 query per invoice for items (e.g. 50 invoices = 51 queries)
             // Now: 2 queries total (invoices + ALL their items batched), grouped in JS
-            // NOTE: Using select('*') only — categories(*) is Supabase join syntax not valid in NeonDB proxy.
+            // NOTE: Using select('*') only ΓÇö categories(*) is Supabase join syntax not valid in NeonDB proxy.
             // Category data is merged client-side using category_id.
             const loadInvoices = () => _dedupe('invoices', async () => {
                 const cached = getCachedData('invoices');
@@ -1455,7 +1455,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 saveBusiness(b, false);
             };
 
-            // ── Import Order from WhatsApp screenshot via Groq Vision ──────
+            // ΓöÇΓöÇ Import Order from WhatsApp screenshot via Groq Vision ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             const WHATSAPP_PROMPT = `This is a WhatsApp chat screenshot containing one or more orders from different shops. Each order block has: a shop photo (ignore the image), then text with Date, Outlet Name, Area, Order items, and Value.\n\nExtract ALL order blocks you can find. For each order:\n- customerName: the Outlet Name (text only, ignore shop signboard images)\n- customerAddress: the Area\n- date: the Date field\n- items: parse each order line. Format is usually 'ProductName Rate/ - QtyPcs'\n  Examples:\n  '75GM Jelly 120/ -2Pcs' -> name:'75GM Jelly', rate:120, qty:2\n  '25 Pcs Jelly - 00 Pcs' -> name:'25 Pcs Jelly', rate:0, qty:0\n  'Value -336' is the total, NOT an item - skip it\n- Skip any items where qty is 0\n- If Outlet Name is blank/missing, set customerName to null\n\nReturn ONLY this JSON, no explanation, no markdown:\n{"orders":[{"customerName":"string or null","customerAddress":"string or null","date":"string or null","items":[{"name":"string","rate":0,"qty":0}]}]}`;
 
             const loadOrderIntoForm = (order) => {
@@ -1477,13 +1477,13 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 newItems.push({ id: Date.now()+9999, name:'', hsn: selectedCategory?.default_hsn||'33074100', qty:1, unit:'Pcs', rate:0, mrp:0, freeQty:0, freeUnit:'Pcs', discount:0, discountAmount:0 });
                 setItems(newItems);
                 setShowOrderModal(false);
-                showToast(`✅ Loaded ${activeItems.length} item${activeItems.length!==1?'s':''} for ${order.customerName||'order'} — review before saving`, 'ok');
+                showToast(`Γ£à Loaded ${activeItems.length} item${activeItems.length!==1?'s':''} for ${order.customerName||'order'} ΓÇö review before saving`, 'ok');
             };
 
             const importFromImage = async (file) => {
                 if (!file) return;
                 if (!file.type.startsWith('image/')) {
-                    showToast('PDF not supported — please screenshot the order and upload as image.', 'err', 6000);
+                    showToast('PDF not supported ΓÇö please screenshot the order and upload as image.', 'err', 6000);
                     return;
                 }
                 setImportLoading(true);
@@ -1513,20 +1513,20 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     let raw = data.choices?.[0]?.message?.content || '';
                     raw = raw.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
                     let parsed;
-                    try { parsed = JSON.parse(raw); } catch { showToast('❌ Couldn\'t read orders clearly, please fill manually', 'err'); setImportLoading(false); return; }
+                    try { parsed = JSON.parse(raw); } catch { showToast('Γ¥î Couldn\'t read orders clearly, please fill manually', 'err'); setImportLoading(false); return; }
 
                     const orders = Array.isArray(parsed.orders) ? parsed.orders.filter(o => (o.items||[]).some(i => i.qty > 0)) : [];
-                    if (orders.length === 0) { showToast('⚠️ No orders with items found in screenshot', 'err'); return; }
+                    if (orders.length === 0) { showToast('ΓÜá∩╕Å No orders with items found in screenshot', 'err'); return; }
 
                     if (orders.length === 1) {
                         loadOrderIntoForm(orders[0]);
                     } else {
                         setExtractedOrders(orders);
                         setShowOrderModal(true);
-                        showToast(`Found ${orders.length} orders in screenshot — select one to load`, 'ok', 5000);
+                        showToast(`Found ${orders.length} orders in screenshot ΓÇö select one to load`, 'ok', 5000);
                     }
                 } catch(e) {
-                    showToast('❌ Import failed: ' + e.message, 'err');
+                    showToast('Γ¥î Import failed: ' + e.message, 'err');
                 } finally {
                     setImportLoading(false);
                     if (importFileRef.current) importFileRef.current.value = '';
@@ -1704,7 +1704,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 setIsEditMode(false);
                 invalidateCache('invoices', 'customers', 'products');
                 await Promise.all([loadInvoices(), loadCustomers(), loadProducts(), generateNextInvoiceNumber()]);
-                showToast(overwrite ? '✅ Invoice updated — review and print when ready' : '✅ Invoice saved — review and print when ready', 'ok', 5000);
+                showToast(overwrite ? 'Γ£à Invoice updated ΓÇö review and print when ready' : 'Γ£à Invoice saved ΓÇö review and print when ready', 'ok', 5000);
             };
             
             const updatePaymentStatus = async (invoice, status, amountPaid, notes) => {
@@ -1850,10 +1850,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('div', { style:{ background:'#fff', borderRadius:'16px', width:'100%', maxWidth:'480px', maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'0 24px 60px rgba(0,0,0,0.3)', overflow:'hidden' } },
                         h('div', { style:{ padding:'20px 24px 16px', borderBottom:'1px solid #e5e7eb', display:'flex', justifyContent:'space-between', alignItems:'center' } },
                             h('div', {},
-                                h('h2', { style:{ fontSize:'18px', fontWeight:700, color:'#1f2937', margin:0 } }, '📋 Multiple Orders Found'),
-                                h('p', { style:{ fontSize:'13px', color:'#6b7280', margin:'4px 0 0' } }, `${extractedOrders.length} orders detected — pick one to load into invoice`)
+                                h('h2', { style:{ fontSize:'18px', fontWeight:700, color:'#1f2937', margin:0 } }, '≡ƒôï Multiple Orders Found'),
+                                h('p', { style:{ fontSize:'13px', color:'#6b7280', margin:'4px 0 0' } }, `${extractedOrders.length} orders detected ΓÇö pick one to load into invoice`)
                             ),
-                            h('button', { onClick:()=>setShowOrderModal(false), style:{ background:'none', border:'none', fontSize:'20px', cursor:'pointer', color:'#6b7280', lineHeight:1 } }, '✕')
+                            h('button', { onClick:()=>setShowOrderModal(false), style:{ background:'none', border:'none', fontSize:'20px', cursor:'pointer', color:'#6b7280', lineHeight:1 } }, 'Γ£ò')
                         ),
                         h('div', { style:{ overflowY:'auto', padding:'12px 16px', display:'flex', flexDirection:'column', gap:'10px' } },
                             extractedOrders.map((order, idx) => {
@@ -1863,21 +1863,21 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' } },
                                         h('div', {},
                                             h('p', { style:{ fontWeight:700, fontSize:'15px', color:'#1f2937', margin:0 } }, order.customerName || '(No outlet name)'),
-                                            h('p', { style:{ fontSize:'12px', color:'#6b7280', margin:'2px 0 0' } }, [order.customerAddress, order.date].filter(Boolean).join(' · ') || 'No details')
+                                            h('p', { style:{ fontSize:'12px', color:'#6b7280', margin:'2px 0 0' } }, [order.customerAddress, order.date].filter(Boolean).join(' ┬╖ ') || 'No details')
                                         ),
                                         h('div', { style:{ textAlign:'right' } },
                                             h('p', { style:{ fontSize:'13px', fontWeight:600, color:'#7c3aed' } }, `${activeItems.length} item${activeItems.length!==1?'s':''}`),
-                                            total > 0 && h('p', { style:{ fontSize:'12px', color:'#6b7280' } }, `₹${total.toFixed(0)}`)
+                                            total > 0 && h('p', { style:{ fontSize:'12px', color:'#6b7280' } }, `Γé╣${total.toFixed(0)}`)
                                         )
                                     ),
                                     h('div', { style:{ fontSize:'12px', color:'#4b5563', marginBottom:'10px' } },
-                                        activeItems.slice(0,3).map((it,i)=>h('span',{key:i,style:{display:'inline-block',background:'#f3f4f6',borderRadius:'6px',padding:'2px 8px',marginRight:'4px',marginBottom:'3px'}},`${it.name} ×${it.qty}`)),
+                                        activeItems.slice(0,3).map((it,i)=>h('span',{key:i,style:{display:'inline-block',background:'#f3f4f6',borderRadius:'6px',padding:'2px 8px',marginRight:'4px',marginBottom:'3px'}},`${it.name} ├ù${it.qty}`)),
                                         activeItems.length > 3 && h('span',{style:{color:'#9ca3af',fontSize:'11px'}},`+${activeItems.length-3} more`)
                                     ),
                                     h('button', {
                                         onClick: () => loadOrderIntoForm(order),
                                         style:{ width:'100%', padding:'8px', background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', borderRadius:'8px', fontWeight:600, fontSize:'13px', cursor:'pointer' }
-                                    }, 'Create Invoice →')
+                                    }, 'Create Invoice ΓåÆ')
                                 );
                             })
                         )
@@ -1890,13 +1890,13 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('div',{className:'container mx-auto px-4 md:px-6 py-3 md:py-4'},
                         h('div',{className:'flex items-center justify-between gap-2'},
                             h('div',{className:'flex items-center gap-2 md:gap-3'},
-                                h('div',{className:'text-2xl md:text-3xl'},'💼'),
+                                h('div',{className:'text-2xl md:text-3xl'},'≡ƒÆ╝'),
                                 h('h1',{className:'text-lg md:text-2xl font-bold truncate'},'Smart GST Billing')
                             ),
                             h('div',{className:'flex items-center gap-2 md:gap-4'},
                                 h('span',{className:'hidden md:inline text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full truncate max-w-[150px]'}, user.email),
-                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 p-2 md:px-4 md:py-2 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'🤖 AI'),h('span',{className:'md:hidden'},'🤖')),
-                                h('button',{onClick:()=>{try{localStorage.removeItem('uiState_'+user.id);}catch(e){}onLogout();},className:'bg-red-500 hover:bg-red-600 px-2 py-2 md:px-4 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'Logout'),h('span',{className:'md:hidden'},'🚪'))
+                                h('button',{onClick:()=>setShowChatbot(!showChatbot),className:'bg-white bg-opacity-20 hover:bg-opacity-30 p-2 md:px-4 md:py-2 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'≡ƒñû AI'),h('span',{className:'md:hidden'},'≡ƒñû')),
+                                h('button',{onClick:()=>{try{localStorage.removeItem('uiState_'+user.id);}catch(e){}onLogout();},className:'bg-red-500 hover:bg-red-600 px-2 py-2 md:px-4 rounded-lg transition text-sm md:text-base'},h('span',{className:'hidden md:inline'},'Logout'),h('span',{className:'md:hidden'},'≡ƒÜ¬'))
                             )
                         )
                     )
@@ -1905,22 +1905,22 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 // Side Navigation
                 h('div',{className:'container mx-auto px-2 md:px-6 py-3 md:py-6'},
                     h('div',{className:'mobile-scroll flex gap-2 md:gap-4 mb-4 md:mb-6 pb-2 scrollbar-thin'},
-                        h(NavButton, {icon:'📊', label:'Dashboard', viewName:'dashboard'}),
-                        h(NavButton, {icon:'📝', label:'Invoice', viewName:'invoice'}),
-                        h(NavButton, {icon:'📦', label:'Products', viewName:'stock'}),
-                        h(NavButton, {icon:'📜', label:'History', viewName:'history'}),
-                        h(NavButton, {icon:'⚙️', label:'Settings', viewName:'settings'})
+                        h(NavButton, {icon:'≡ƒôè', label:'Dashboard', viewName:'dashboard'}),
+                        h(NavButton, {icon:'≡ƒô¥', label:'Invoice', viewName:'invoice'}),
+                        h(NavButton, {icon:'≡ƒôª', label:'Products', viewName:'stock'}),
+                        h(NavButton, {icon:'≡ƒô£', label:'History', viewName:'history'}),
+                        h(NavButton, {icon:'ΓÜÖ∩╕Å', label:'Settings', viewName:'settings'})
                     ),
                     
                     // Main Content
                     view==='dashboard' ? h(Dashboard, {invoices:invs, customers:custs, products:prods}) :
                     view==='settings'?h('div',{className:'bg-white rounded-xl shadow-lg p-4 md:p-8'},
-                        h('h2',{className:'text-2xl md:text-3xl font-bold mb-6 gradient-text'},'⚙️ Settings'),
+                        h('h2',{className:'text-2xl md:text-3xl font-bold mb-6 gradient-text'},'ΓÜÖ∩╕Å Settings'),
 
-                        // ── MY BUSINESSES ──────────────────────────────────
+                        // ΓöÇΓöÇ MY BUSINESSES ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
                         h('div',{className:'mb-10'},
                             h('div',{className:'flex justify-between items-center mb-4'},
-                                h('h3',{className:'text-xl font-bold text-gray-800'},'🏢 My Businesses'),
+                                h('h3',{className:'text-xl font-bold text-gray-800'},'≡ƒÅó My Businesses'),
                                 h('button',{
                                     onClick:()=>{setEditingBusiness(null);setBizForm({name:'',address:'',gstin:'',phone:'',email:'',bank_name:'',branch_name:'',account_no:'',ifsc:''});setShowBusinessForm(true)},
                                     className:'gradient-bg text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-semibold flex items-center gap-2'
@@ -1937,26 +1937,26 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 biz.is_default&&h('span',{className:'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold'},'Default')
                                             ),
                                             biz.gstin&&h('p',{className:'text-xs text-gray-500'},'GSTIN: '+biz.gstin),
-                                            biz.phone&&h('p',{className:'text-xs text-gray-500'},'📞 '+biz.phone)
+                                            biz.phone&&h('p',{className:'text-xs text-gray-500'},'≡ƒô₧ '+biz.phone)
                                         ),
                                         h('div',{className:'flex gap-2 ml-2'},
                                             h('button',{
                                                 onClick:()=>{setActiveBusiness(biz);setConfig(mapBiz(biz));},
                                                 className:'text-xs px-3 py-1 rounded-lg font-semibold '+(activeBusiness?.id===biz.id?'bg-purple-500 text-white':'bg-gray-100 hover:bg-purple-100 text-gray-700'),
                                                 title:'Use this business for new invoices'
-                                            },activeBusiness?.id===biz.id?'✓ Active':'Select'),
+                                            },activeBusiness?.id===biz.id?'Γ£ô Active':'Select'),
                                             !biz.is_default&&h('button',{
                                                 onClick:()=>setDefaultBusiness(biz),
                                                 className:'text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 font-semibold',title:'Make Default'
-                                            },'★'),
+                                            },'Γÿà'),
                                             h('button',{
                                                 onClick:()=>{setEditingBusiness(biz);setBizForm({name:biz.name,address:biz.address||'',gstin:biz.gstin||'',phone:biz.phone||'',email:biz.email||'',bank_name:biz.bank_name||'',branch_name:biz.branch_name||'',account_no:biz.account_no||'',ifsc:biz.ifsc||''});setShowBusinessForm(true)},
                                                 className:'text-xs px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold'
-                                            },'✎'),
+                                            },'Γ£Ä'),
                                             h('button',{
                                                 onClick:()=>deleteBusiness(biz),
                                                 className:'text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold'
-                                            },'✕')
+                                            },'Γ£ò')
                                         )
                                     )
                                 ))
@@ -1964,7 +1964,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
 
                             // Add/Edit business form
                             showBusinessForm&&h('div',{className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200'},
-                                h('h4',{className:'font-bold text-lg mb-4 text-purple-800'},(editingBusiness?'✎ Edit':'➕ Add')+' Business'),
+                                h('h4',{className:'font-bold text-lg mb-4 text-purple-800'},(editingBusiness?'Γ£Ä Edit':'Γ₧ò Add')+' Business'),
                                 h('div',{className:'grid grid-cols-1 md:grid-cols-2 gap-4'},
                                     h('div',{className:'md:col-span-2'},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Business Name *'),h('input',{type:'text',value:bizForm.name,onChange:e=>setBizForm({...bizForm,name:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'e.g. Gaurav Enterprises'})),
                                     h('div',{className:'md:col-span-2'},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'Address'),h('textarea',{value:bizForm.address,onChange:e=>setBizForm({...bizForm,address:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',rows:2})),
@@ -1977,17 +1977,17 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div',{},h('label',{className:'block font-semibold mb-1 text-gray-700 text-sm'},'IFSC'),h('input',{type:'text',value:bizForm.ifsc,onChange:e=>setBizForm({...bizForm,ifsc:e.target.value}),className:'w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'}))
                                 ),
                                 h('div',{className:'flex gap-3 mt-4'},
-                                    h('button',{onClick:()=>saveBusiness({...(editingBusiness||{}), ...bizForm}, !editingBusiness),className:'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
+                                    h('button',{onClick:()=>saveBusiness({...(editingBusiness||{}), ...bizForm}, !editingBusiness),className:'gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition font-semibold'},'≡ƒÆ╛ Save'),
                                     h('button',{onClick:()=>{setShowBusinessForm(false);setEditingBusiness(null)},className:'bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg transition font-semibold'},'Cancel')
                                 )
                             )
                         ),
 
-                        // ── CATEGORIES ─────────────────────────────────────
+                        // ΓöÇΓöÇ CATEGORIES ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
                         h('div',{className:'border-t-2 pt-8'},
                             h('div',{className:'flex justify-between items-center mb-4'},
-                                h('h3',{className:'text-2xl font-bold text-gray-800'},'📋 Bill Categories'),
-                                h('button',{onClick:()=>{setShowCategoryForm(true);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false,business_id:activeBusiness?.id||null})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition font-semibold'},'➕ Add Category')
+                                h('h3',{className:'text-2xl font-bold text-gray-800'},'≡ƒôï Bill Categories'),
+                                h('button',{onClick:()=>{setShowCategoryForm(true);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false,business_id:activeBusiness?.id||null})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition font-semibold'},'Γ₧ò Add Category')
                             ),
                             showCategoryForm&&h('div',{className:'mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
                                 h('h4',{className:'font-bold mb-4 text-lg'},(editingCategory?'Edit':'Add')+' Category'),
@@ -1995,10 +1995,10 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Category Name'),h('input',{type:'text',value:categoryFormData.name,onChange:e=>setCategoryFormData({...categoryFormData,name:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'e.g., Retail Bills, Wholesale Bills'})),
                                     h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Description (Optional)'),h('textarea',{value:categoryFormData.description,onChange:e=>setCategoryFormData({...categoryFormData,description:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',rows:2})),
                                     h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Default HSN Code'),h('input',{type:'text',value:categoryFormData.default_hsn,onChange:e=>setCategoryFormData({...categoryFormData,default_hsn:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition',placeholder:'33074100'})),
-                                    businesses.length>1&&h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Assign to Business'),h('select',{value:categoryFormData.business_id||'',onChange:e=>setCategoryFormData({...categoryFormData,business_id:e.target.value||null}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'},h('option',{value:''},'— All Businesses —'),businesses.map(b=>h('option',{key:b.id,value:b.id},b.name)))),
+                                    businesses.length>1&&h('div',{},h('label',{className:'block font-semibold mb-2 text-gray-700'},'Assign to Business'),h('select',{value:categoryFormData.business_id||'',onChange:e=>setCategoryFormData({...categoryFormData,business_id:e.target.value||null}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 transition'},h('option',{value:''},'ΓÇö All Businesses ΓÇö'),businesses.map(b=>h('option',{key:b.id,value:b.id},b.name)))),
                                     h('div',{className:'flex items-center gap-3'},h('label',{className:'font-semibold text-gray-700'},'Has MRP Column'),h('input',{type:'checkbox',checked:categoryFormData.has_mrp,onChange:e=>setCategoryFormData({...categoryFormData,has_mrp:e.target.checked}),className:'w-5 h-5 text-purple-600 rounded'})),
                                     h('div',{className:'flex gap-3'},
-                                        h('button',{onClick:saveCategory,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'💾 Save'),
+                                        h('button',{onClick:saveCategory,className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'≡ƒÆ╛ Save'),
                                         h('button',{onClick:()=>{setShowCategoryForm(false);setEditingCategory(null);setCategoryFormData({name:'',description:'',default_hsn:'33074100',has_mrp:false})},className:'bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Cancel')
                                     )
                                 )
@@ -2008,8 +2008,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div',{className:'flex justify-between items-start mb-2'},
                                         h('h4',{className:'font-bold text-lg text-gray-800'},cat.name),
                                         h('div',{className:'flex gap-2'},
-                                            h('button',{onClick:()=>{setEditingCategory(cat);setCategoryFormData({name:cat.name,description:cat.description||'',default_hsn:cat.default_hsn||'33074100',has_mrp:cat.has_mrp||false,business_id:cat.business_id||null});setShowCategoryForm(true)},className:'text-blue-500 hover:text-blue-700 font-bold'},'✎'),
-                                            h('button',{onClick:()=>deleteCategory(cat.id),className:'text-red-500 hover:text-red-700 font-bold'},'✕')
+                                            h('button',{onClick:()=>{setEditingCategory(cat);setCategoryFormData({name:cat.name,description:cat.description||'',default_hsn:cat.default_hsn||'33074100',has_mrp:cat.has_mrp||false,business_id:cat.business_id||null});setShowCategoryForm(true)},className:'text-blue-500 hover:text-blue-700 font-bold'},'Γ£Ä'),
+                                            h('button',{onClick:()=>deleteCategory(cat.id),className:'text-red-500 hover:text-red-700 font-bold'},'Γ£ò')
                                         )
                                     ),
                                     cat.description&&h('p',{className:'text-gray-600 text-sm mb-2'},cat.description),
@@ -2028,7 +2028,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 className:'text-xs w-full px-2 py-1 border border-gray-200 rounded bg-gray-50'
                                             },
                                                 h('option',{value:''},'All Businesses'),
-                                                businesses.map(b=>h('option',{key:b.id,value:b.id},'→ '+b.name))
+                                                businesses.map(b=>h('option',{key:b.id,value:b.id},'ΓåÆ '+b.name))
                                             )
                                         )
                                     )
@@ -2036,14 +2036,14 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             )
                         )
                     ):view==='invoice'?(!selectedCategory?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
-                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'📝 Select Bill Category'),
+                        h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'≡ƒô¥ Select Bill Category'),
                         categories.length===0?h('div',{className:'text-center py-12'},
                             h('p',{className:'text-gray-600 mb-4'},'No categories found. Please add categories in Settings.'),
                             h('button',{onClick:()=>setView('settings'),className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Go to Settings')
                         ):h('div',{className:'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'},
                             categories.map(cat=>
                                 h('div',{key:cat.id,onClick:()=>{setSelectedCategory(cat);setItems([{id:Date.now(),name:'',hsn:cat.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-lg p-6 cursor-pointer card-hover border-2 border-transparent hover:border-purple-500 transition'},
-                                    h('div',{className:'text-4xl mb-3'},'📋'),
+                                    h('div',{className:'text-4xl mb-3'},'≡ƒôï'),
                                     h('h3',{className:'text-xl font-bold text-gray-800 mb-2'},cat.name),
                                     cat.description&&h('p',{className:'text-gray-600 text-sm mb-3'},cat.description),
                                     h('div',{className:'flex gap-2 text-xs'},
@@ -2057,14 +2057,14 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         h('div',{className:'flex justify-between items-center mb-6 pb-6 border-b-2'},
                             h('div',{},
                                 h('div',{className:'flex items-center gap-3 mb-2'},
-                                    h('button',{onClick:()=>{setSelectedCategory(null);setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'text-gray-500 hover:text-gray-700 transition'},'← Back'),
+                                    h('button',{onClick:()=>{setSelectedCategory(null);setItems([{id:Date.now(),name:'',hsn:'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0}])},className:'text-gray-500 hover:text-gray-700 transition'},'ΓåÉ Back'),
                                     h('h3',{className:'text-xl font-bold gradient-text'},selectedCategory.name)
                                 ),
                                 h('div',{className:'flex flex-wrap gap-2 md:gap-4'},
-                                    h('button',{onClick:async()=>{setIsEditMode(false);setEditingInvoiceId(null);clearInvoiceCache();await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🆕 New'),
-                                    h('button',{onClick:()=>importFileRef.current?.click(),disabled:importLoading,className:'border-2 border-purple-500 text-purple-600 hover:bg-purple-50 px-4 md:px-5 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base flex items-center gap-2 disabled:opacity-60'},importLoading?h('span',{style:{display:'inline-block',width:'14px',height:'14px',border:'2px solid #a855f7',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}):null,importLoading?'Reading…':'📷 Import Order'),
-                                    h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:opacity-90 transition font-semibold text-sm md:text-base'},'💾 Save'),
-                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate,items.filter(i=>i.name).length)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'🖨 Print')
+                                    h('button',{onClick:async()=>{setIsEditMode(false);setEditingInvoiceId(null);clearInvoiceCache();await generateNextInvoiceNumber();setInvDate(getCurrentDate());setCustName('');setCustAddr('');setCustGST('');setCustPhone('');setItems([{id:Date.now(),name:'',hsn:selectedCategory.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]);setDiscount(0);setDiscountAmount(0);},className:'bg-green-500 hover:bg-green-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'≡ƒåò New'),
+                                    h('button',{onClick:()=>importFileRef.current?.click(),disabled:importLoading,className:'border-2 border-purple-500 text-purple-600 hover:bg-purple-50 px-4 md:px-5 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base flex items-center gap-2 disabled:opacity-60'},importLoading?h('span',{style:{display:'inline-block',width:'14px',height:'14px',border:'2px solid #a855f7',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}):null,importLoading?'ReadingΓÇª':'≡ƒô╖ Import Order'),
+                                    h('button',{onClick:saveInvoice,className:'gradient-bg text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:opacity-90 transition font-semibold text-sm md:text-base'},'≡ƒÆ╛ Save'),
+                                    items.filter(i=>i.name).length>0&&h('button',{onClick:()=>{const invalidItems = items.filter(i => i.name && (!i.qty || parseFloat(i.qty) <= 0 || !i.rate || parseFloat(i.rate) <= 0));if(invalidItems.length>0){alert('Please fill quantity AND rate for all items before printing!');return;}printWithFilename(custName||'Customer',invNum,invDate,items.filter(i=>i.name).length)},className:'bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition font-semibold text-sm md:text-base'},'≡ƒû¿ Print')
                                 )
                             ),
                             h('div',{className:'flex items-center gap-3'},
@@ -2129,7 +2129,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('td',{className:'border border-gray-300 p-3'},
                                             h('div',{className:'flex flex-col gap-1'},
                                                 h('input',{type:'number',value:it.rate,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,rate:e.target.value}:i)),className:'w-28 px-3 py-2 border-2 border-gray-200 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:taxInc?'Final Price':'Rate'}),
-                                                taxInc&&parseFloat(it.rate)>0&&h('span',{className:'text-xs text-purple-600 font-semibold'},'Showing Price: ₹'+c.unitBase)
+                                                taxInc&&parseFloat(it.rate)>0&&h('span',{className:'text-xs text-purple-600 font-semibold'},'Showing Price: Γé╣'+c.unitBase)
                                             )
                                         ),
                                         h('td',{className:'border border-gray-300 p-3'},
@@ -2140,22 +2140,22 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                                 ),
                                                 h('div',{className:'relative'},
                                                     h('input',{type:'number',value:it.discountAmount||0,onChange:e=>setItems(items.map(i=>i.id===it.id?{...i,discountAmount:e.target.value}:i)),className:'w-20 px-2 py-1 border-2 border-gray-200 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition pr-6',step:0.01,min:0,placeholder:'0'}),
-                                                    h('span',{className:'absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-bold'},'₹')
+                                                    h('span',{className:'absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-bold'},'Γé╣')
                                                 )
                                             )
                                         ),
-                                        h('td',{className:'border border-gray-300 p-3 text-right font-bold text-purple-600'},'₹'+c.tot),
-                                        h('td',{className:'border border-gray-300 p-3 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 hover:text-red-700 font-bold text-xl transition',disabled:items.length===1},'✕'))
+                                        h('td',{className:'border border-gray-300 p-3 text-right font-bold text-purple-600'},'Γé╣'+c.tot),
+                                        h('td',{className:'border border-gray-300 p-3 text-center'},h('button',{onClick:()=>items.length>1&&setItems(items.filter(i=>i.id!==it.id)),className:'text-red-500 hover:text-red-700 font-bold text-xl transition',disabled:items.length===1},'Γ£ò'))
                                     )}))
                                 )
                             ),
-                            h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]),className:'mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Item'),
+                            h('button',{onClick:()=>setItems([...items,{id:Date.now(),name:'',hsn:selectedCategory?.default_hsn||'33074100',qty:1,unit:'Pcs',rate:0,mrp:0,freeQty:0,freeUnit:'Pcs',discount:0,discountAmount:0}]),className:'mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Γ₧ò Add Item'),
                             itemDropdown.id&&prods.filter(p=>(!selectedCategory||!p.category_id||p.category_id===selectedCategory.id)&&p.name.toLowerCase().includes(((items.find(i=>i.id===itemDropdown.id)||{}).name||'').toLowerCase())).length>0&&
                             h('div',{style:{position:'fixed',top:itemDropdown.top,left:itemDropdown.left,width:itemDropdown.width,zIndex:999999,boxShadow:'0 10px 40px rgba(0,0,0,0.25)'},className:'bg-white border-2 border-purple-400 rounded-lg overflow-hidden'},
                                 prods.filter(p=>(!selectedCategory||!p.category_id||p.category_id===selectedCategory.id)&&p.name.toLowerCase().includes(((items.find(i=>i.id===itemDropdown.id)||{}).name||'').toLowerCase())).slice(0,6).map((p,i)=>
                                     h('div',{key:i,onMouseDown:e=>{e.preventDefault();setItems(items.map(im=>im.id===itemDropdown.id?{...im,name:p.name,rate:p.rate,mrp:p.mrp||0,hsn:p.hsn||im.hsn}:im));setItemDropdown({id:null,top:0,left:0,width:300})},className:'px-4 py-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition flex justify-between items-center'},
                                         h('span',{className:'font-medium text-gray-800'},p.name),
-                                        h('span',{className:'text-purple-600 font-semibold'},'₹'+p.rate)
+                                        h('span',{className:'text-purple-600 font-semibold'},'Γé╣'+p.rate)
                                     )
                                 )
                             )
@@ -2169,7 +2169,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('input',{type:'number',value:discount,onChange:e=>setDiscount(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg',step:0.01,min:0,max:100,placeholder:'0'})
                                     ),
                                     h('div',{},
-                                        h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'Amount (₹)'),
+                                        h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'Amount (Γé╣)'),
                                         h('input',{type:'number',value:discountAmount,onChange:e=>setDiscountAmount(e.target.value),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg',step:0.01,min:0,placeholder:'0'})
                                     )
                                 ),
@@ -2177,19 +2177,19 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                             ),
                             h('div',{className:'p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl'},
                                 h('h3',{className:'font-bold mb-3 text-lg text-gray-800'},'Totals'),
-                                h('p',{className:'text-gray-700 mb-1'},'Subtotal: ',h('span',{className:'font-bold'},'₹'+tots.sub)),
-                                (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('p',{className:'text-gray-700 mb-1'},'Discount '+(parseFloat(discountAmount)>0?'(₹'+discountAmount+')':'('+discount+'%)')+': ',h('span',{className:'font-bold text-red-600'},'-₹'+tots.discAmt)),
-                                (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('p',{className:'text-gray-700 mb-1'},'After Discount: ',h('span',{className:'font-bold'},'₹'+tots.afterDisc)),
-                                h('p',{className:'text-gray-700 mb-1'},'CGST (2.5%): ',h('span',{className:'font-bold'},'₹'+tots.cg)),
-                                h('p',{className:'text-gray-700 mb-1'},'SGST (2.5%): ',h('span',{className:'font-bold'},'₹'+tots.sg)),
-                                h('p',{className:'text-2xl font-bold text-purple-600 mt-2'},'₹'+tots.gt),
+                                h('p',{className:'text-gray-700 mb-1'},'Subtotal: ',h('span',{className:'font-bold'},'Γé╣'+tots.sub)),
+                                (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('p',{className:'text-gray-700 mb-1'},'Discount '+(parseFloat(discountAmount)>0?'(Γé╣'+discountAmount+')':'('+discount+'%)')+': ',h('span',{className:'font-bold text-red-600'},'-Γé╣'+tots.discAmt)),
+                                (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('p',{className:'text-gray-700 mb-1'},'After Discount: ',h('span',{className:'font-bold'},'Γé╣'+tots.afterDisc)),
+                                h('p',{className:'text-gray-700 mb-1'},'CGST (2.5%): ',h('span',{className:'font-bold'},'Γé╣'+tots.cg)),
+                                h('p',{className:'text-gray-700 mb-1'},'SGST (2.5%): ',h('span',{className:'font-bold'},'Γé╣'+tots.sg)),
+                                h('p',{className:'text-2xl font-bold text-purple-600 mt-2'},'Γé╣'+tots.gt),
                                 h('p',{className:'text-xs text-gray-600 mt-2'},tots.words)
                             )
                         )
                     )):view==='stock'?h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
                         h('div',{className:'flex justify-between mb-4'},
                             h('h2',{className:'text-3xl font-bold gradient-text'},'Product Rates'),
-                            h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0,mrp:0,hsn:'',category_id:stockCategoryFilter!=='all'?stockCategoryFilter:''})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'➕ Add Product')
+                            h('button',{onClick:()=>{setShowStockForm(true);setStockFormData({name:'',rate:0,mrp:0,hsn:'',category_id:stockCategoryFilter!=='all'?stockCategoryFilter:''})},className:'bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition font-semibold'},'Γ₧ò Add Product')
                         ),
                         h('div',{className:'flex gap-2 mb-6 flex-wrap'},
                             h('button',{onClick:()=>setStockCategoryFilter('all'),className:'px-4 py-2 rounded-lg font-semibold transition '+(stockCategoryFilter==='all'?'gradient-bg text-white shadow':'bg-gray-100 text-gray-600 hover:bg-gray-200')},'All ('+stock.length+')'),
@@ -2202,7 +2202,7 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                 h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Selling Price'),h('div',{className:'relative'},h('input',{type:'number',placeholder:'e.g. 48',value:stockFormData.rate,onChange:e=>setStockFormData({...stockFormData,rate:e.target.value}),className:'w-full px-4 py-3 pr-16 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),h('span',{className:'absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-purple-500 pointer-events-none bg-purple-50 px-1 rounded'},'RATE'))),
                                 h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Max Retail Price'),h('div',{className:'relative'},h('input',{type:'number',placeholder:'e.g. 60',value:stockFormData.mrp||0,onChange:e=>setStockFormData({...stockFormData,mrp:e.target.value}),className:'w-full px-4 py-3 pr-14 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01}),h('span',{className:'absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-green-600 pointer-events-none bg-green-50 px-1 rounded'},'MRP'))),
                                 h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'HSN Code'),h('input',{type:'text',placeholder:'e.g. 33074100',value:stockFormData.hsn||'',onChange:e=>setStockFormData({...stockFormData,hsn:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'})),
-                                h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Bill Category'),h('select',{value:stockFormData.category_id||'',onChange:e=>setStockFormData({...stockFormData,category_id:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:''},'— No Category —'),categories.map(cat=>h('option',{key:cat.id,value:cat.id},cat.name))))
+                                h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Bill Category'),h('select',{value:stockFormData.category_id||'',onChange:e=>setStockFormData({...stockFormData,category_id:e.target.value}),className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:''},'ΓÇö No Category ΓÇö'),categories.map(cat=>h('option',{key:cat.id,value:cat.id},cat.name))))
                             ),
                             h('div',{className:'flex gap-3'},
                                 h('button',{onClick:async()=>{if(stockFormData.name){const payload={user_id:user.id,name:stockFormData.name,rate:parseFloat(stockFormData.rate)||0,mrp:parseFloat(stockFormData.mrp)||0,hsn:stockFormData.hsn||''};if(stockFormData.category_id)payload.category_id=stockFormData.category_id;const {error}=await supabase.from('product_rates').upsert(payload,{onConflict:'user_id,name'});if(!error){invalidateCache('products');await loadProducts();setShowStockForm(false);setStockFormData({name:'',rate:0,mrp:0,hsn:'',category_id:''})}}},className:'gradient-bg text-white px-6 py-3 rounded-lg hover:opacity-90 transition font-semibold'},'Save'),
@@ -2219,12 +2219,12 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Max Retail Price'),h('div',{className:'relative'},h('input',{type:'number',value:s.mrp||0,onChange:e=>{const ns=stock.map((st,idx)=>idx===realIdx?{...st,mrp:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 pr-14 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',step:0.01,placeholder:'e.g. 60'}),h('span',{className:'absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-green-600 pointer-events-none bg-green-50 px-1 rounded'},'MRP'))),
                                     h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'HSN Code'),h('input',{type:'text',value:s.hsn||'',onChange:e=>{const ns=stock.map((st,idx)=>idx===realIdx?{...st,hsn:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition',placeholder:'e.g. 33074100'})),
                                     h('div',{},h('label',{className:'block text-xs font-semibold text-gray-500 mb-1'},'Bill Category'),h('select',{value:s.category_id||'',onChange:e=>{const ns=stock.map((st,idx)=>idx===realIdx?{...st,category_id:e.target.value}:st);setStock(ns)},className:'w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},
-                                        h('option',{value:''},'— No Category —'),
+                                        h('option',{value:''},'ΓÇö No Category ΓÇö'),
                                         categories.map(cat=>h('option',{key:cat.id,value:cat.id},cat.name))
                                     )),
                                     h('div',{className:'flex gap-2'},
-                                        h('button',{onClick:async()=>{const upd={name:stock[realIdx].name,rate:parseFloat(stock[realIdx].rate)||0,mrp:parseFloat(stock[realIdx].mrp)||0,hsn:stock[realIdx].hsn||'',category_id:stock[realIdx].category_id||null};await supabase.from('product_rates').update(upd).eq('id',s.id);invalidateCache('products');await loadProducts();setEditingStock(null)},className:'flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✓'),
-                                        h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'✕')
+                                        h('button',{onClick:async()=>{const upd={name:stock[realIdx].name,rate:parseFloat(stock[realIdx].rate)||0,mrp:parseFloat(stock[realIdx].mrp)||0,hsn:stock[realIdx].hsn||'',category_id:stock[realIdx].category_id||null};await supabase.from('product_rates').update(upd).eq('id',s.id);invalidateCache('products');await loadProducts();setEditingStock(null)},className:'flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Γ£ô'),
+                                        h('button',{onClick:async()=>{await loadProducts();setEditingStock(null)},className:'flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Γ£ò')
                                     )
                                 ):
                                 h('div',{},
@@ -2232,8 +2232,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                         h('h3',{className:'text-xl font-bold text-gray-800'},s.name),
                                         s.category_id&&h('span',{className:'text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-semibold'},(categories.find(c=>c.id===s.category_id)||{}).name||'')
                                     ),
-                                    h('p',{className:'text-2xl font-bold text-purple-600 mb-1'},'Rate: ₹'+(s.rate||0)),
-                                    s.mrp>0&&h('p',{className:'text-sm text-gray-500 mb-1'},'MRP: ₹'+(s.mrp||0)),
+                                    h('p',{className:'text-2xl font-bold text-purple-600 mb-1'},'Rate: Γé╣'+(s.rate||0)),
+                                    s.mrp>0&&h('p',{className:'text-sm text-gray-500 mb-1'},'MRP: Γé╣'+(s.mrp||0)),
                                     s.hsn&&h('p',{className:'text-xs text-gray-400 mb-3'},'HSN: '+s.hsn),
                                     h('div',{className:'flex gap-2'},
                                         h('button',{onClick:()=>setEditingStock(realIdx),className:'flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition font-semibold'},'Edit'),
@@ -2244,9 +2244,9 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                         );})()
                     ):h('div',{className:'bg-white rounded-xl shadow-lg p-8'},
                         h('div',{className:'mb-6'},
-                            h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'📜 Invoice History'),
+                            h('h2',{className:'text-3xl font-bold mb-6 gradient-text'},'≡ƒô£ Invoice History'),
                             h('div',{className:'mb-4'},
-                                h('input',{type:'text',placeholder:'🔍 Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-6 py-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg'})
+                                h('input',{type:'text',placeholder:'≡ƒöì Search by invoice # or customer name...',value:searchQuery,onChange:e=>setSearchQuery(e.target.value),className:'w-full px-6 py-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg'})
                             ),
                             h('div',{className:'flex items-center gap-4 mb-4 flex-wrap'},
                                 h('div',{},h('label',{className:'block text-sm font-semibold mb-2 text-gray-700'},'Category'),h('select',{value:categoryFilter,onChange:e=>setCategoryFilter(e.target.value),className:'px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},h('option',{value:''},'All Categories'),categories.map(cat=>h('option',{key:cat.id,value:cat.id},cat.name)))),
@@ -2264,21 +2264,21 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                                     h('td',{className:'border border-gray-300 p-4'},inv.date),
                                     h('td',{className:'border border-gray-300 p-4'},inv.customer.name),
                                     h('td',{className:'border border-gray-300 p-4'},h('span',{className:'bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium'},inv.category?.name||'N/A')),
-                                    h('td',{className:'border border-gray-300 p-4 text-right font-bold'},'₹'+inv.totals.gt),
+                                    h('td',{className:'border border-gray-300 p-4 text-right font-bold'},'Γé╣'+inv.totals.gt),
                                     h('td',{className:'border border-gray-300 p-4 text-center'},
                                         h('span',{className:`status-badge status-${inv.payment_status}`},
-                                            inv.payment_status === 'paid' ? '✅ Paid' :
-                                            inv.payment_status === 'partial' ? '⏳ Partial' : '⚠️ Unpaid'
+                                            inv.payment_status === 'paid' ? 'Γ£à Paid' :
+                                            inv.payment_status === 'partial' ? 'ΓÅ│ Partial' : 'ΓÜá∩╕Å Unpaid'
                                         ),
                                         inv.payment_status === 'partial' && 
-                                        h('div',{className:'text-xs mt-1 text-gray-600'},'Paid: ₹'+inv.amount_paid+' / Pending: ₹'+(parseFloat(inv.totals.gt) - parseFloat(inv.amount_paid)).toFixed(2))
+                                        h('div',{className:'text-xs mt-1 text-gray-600'},'Paid: Γé╣'+inv.amount_paid+' / Pending: Γé╣'+(parseFloat(inv.totals.gt) - parseFloat(inv.amount_paid)).toFixed(2))
                                     ),
                                     h('td',{className:'border border-gray-300 p-4'},
                                         h('div',{className:'flex gap-2 justify-center flex-wrap'},
-                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>printWithFilename(inv.customer.name,inv.invoiceNumber,inv.date,inv.items.length),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🖨 Print'),
-                                            h('button',{onClick:()=>{clearInvoiceCache();setIsEditMode(true);setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setEditingInvoiceId(inv.id);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'✏️ Edit'),
-                                            h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'💳 Payment'),
-                                            h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'🗑 Delete')
+                                            h('button',{onClick:()=>{setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setView('invoice');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>printWithFilename(inv.customer.name,inv.invoiceNumber,inv.date,inv.items.length),100)))},className:'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'≡ƒû¿ Print'),
+                                            h('button',{onClick:()=>{clearInvoiceCache();setIsEditMode(true);setInvNum(inv.invoiceNumber);setInvDate(inv.date);setCustName(inv.customer.name);setCustAddr(inv.customer.address);setCustGST(inv.customer.gstin);setCustPhone(inv.customer.phone||'');const mappedItems=inv.items.map((it,idx)=>({id:Date.now()+idx,name:it.name,hsn:it.hsn,qty:it.qty,unit:it.unit,rate:it.rate,mrp:it.mrp||0,freeQty:it.freeQty||0,freeUnit:it.freeUnit||'Pcs',discount:it.discount||0,discountAmount:it.discountAmount||0}));setItems(mappedItems);setTaxInc(inv.taxInclusive);setDiscount(inv.discount||0);setDiscountAmount(0);setSelectedCategory(inv.category);setEditingInvoiceId(inv.id);setView('invoice')},className:'bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'Γ£Å∩╕Å Edit'),
+                                            h('button',{onClick:()=>setPaymentModal(inv),className:'bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'≡ƒÆ│ Payment'),
+                                            h('button',{onClick:()=>deleteInvoice(inv),className:'bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition font-semibold'},'≡ƒùæ Delete')
                                         )
                                     )
                                 )))
@@ -2292,15 +2292,15 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     h('div',{className:'bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full'},
                         h('h3',{className:'text-2xl font-bold mb-4 gradient-text'},'Payment for '+paymentModal.invoiceNumber),
                         h('p',{className:'mb-2'},'Customer: ',h('span',{className:'font-bold'},paymentModal.customer.name)),
-                        h('p',{className:'mb-2'},'Total Amount: ',h('span',{className:'font-bold text-purple-600'},'₹'+paymentModal.totals.gt)),
-                        h('p',{className:'mb-6'},'Already Paid: ',h('span',{className:'font-bold text-green-600'},'₹'+(paymentModal.amount_paid||0))),
+                        h('p',{className:'mb-2'},'Total Amount: ',h('span',{className:'font-bold text-purple-600'},'Γé╣'+paymentModal.totals.gt)),
+                        h('p',{className:'mb-6'},'Already Paid: ',h('span',{className:'font-bold text-green-600'},'Γé╣'+(paymentModal.amount_paid||0))),
                         h('div',{className:'space-y-4'},
                             h('div',{},
                                 h('label',{className:'block font-semibold mb-2 text-gray-700'},'Payment Status'),
                                 h('select',{id:'payment-status',className:'w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition'},
-                                    h('option',{value:'paid'},'✅ Paid'),
-                                    h('option',{value:'partial'},'⏳ Partially Paid'),
-                                    h('option',{value:'unpaid'},'⚠️ Unpaid')
+                                    h('option',{value:'paid'},'Γ£à Paid'),
+                                    h('option',{value:'partial'},'ΓÅ│ Partially Paid'),
+                                    h('option',{value:'unpaid'},'ΓÜá∩╕Å Unpaid')
                                 )
                             ),
                             h('div',{},
@@ -2327,8 +2327,8 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                 // AI Chatbot Sidebar
                 showChatbot && h('div',{className:'fixed right-0 top-0 w-96 h-screen bg-white shadow-2xl z-40 flex flex-col'},
                     h('div',{className:'gradient-bg text-white p-4 flex items-center justify-between'},
-                        h('h3',{className:'text-xl font-bold'},'🤖 AI Assistant'),
-                        h('button',{onClick:()=>setShowChatbot(false),className:'text-white hover:text-gray-200 text-2xl'},'✕')
+                        h('h3',{className:'text-xl font-bold'},'≡ƒñû AI Assistant'),
+                        h('button',{onClick:()=>setShowChatbot(false),className:'text-white hover:text-gray-200 text-2xl'},'Γ£ò')
                     ),
                     h(AIChatbot, {invoices:invs, customers:custs, products:prods, user})
                 )
@@ -2345,19 +2345,19 @@ ${invoices.slice(0, 5).map(inv => `- Invoice ${inv.invoiceNumber}: ${inv.custome
                     ),
                     h('table',{className:'invoice-table'},
                         (()=>{const hasDisc=items.some(it=>it.name&&(parseFloat(it.discount)>0||parseFloat(it.discountAmount)>0));const hasMrp=!!selectedCategory?.has_mrp;const leftSpan=hasMrp?8:7;const rightSpan=(taxInc?2:1)+(hasDisc?1:0);return[
-                        h('thead',{key:'thead'},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'22%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),hasMrp&&h('th',{style:{width:'8%',textAlign:'right'}},'MRP'),h('th',{style:{width:'6%'}},'Qty'),h('th',{style:{width:'6%'}},'Unit'),h('th',{style:{width:'9%'}},'Free'),h('th',{style:{width:taxInc?'10%':'15%',textAlign:'right'}},'Rate'),hasDisc&&h('th',{style:{width:'10%',textAlign:'right'}},'Disc(₹)'),taxInc&&h('th',{style:{width:'11%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
+                        h('thead',{key:'thead'},h('tr',{},h('th',{style:{width:'4%'}},'#'),h('th',{style:{width:'22%'}},'Item'),h('th',{style:{width:'9%'}},'HSN'),hasMrp&&h('th',{style:{width:'8%',textAlign:'right'}},'MRP'),h('th',{style:{width:'6%'}},'Qty'),h('th',{style:{width:'6%'}},'Unit'),h('th',{style:{width:'9%'}},'Free'),h('th',{style:{width:taxInc?'10%':'15%',textAlign:'right'}},'Rate'),hasDisc&&h('th',{style:{width:'10%',textAlign:'right'}},'Disc(Γé╣)'),taxInc&&h('th',{style:{width:'11%',textAlign:'right'}},'Taxable'),h('th',{style:{width:'15%',textAlign:'right'}},'Total'))),
                         h('tbody',{key:'tbody'},
-                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'0';const discRupee=(parseFloat(it.rate)*parseFloat(it.qty||1)-parseFloat(c.tot)).toFixed(2);return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name),h('td',{},it.hsn),hasMrp&&h('td',{style:{textAlign:'right'}},'₹'+(it.mrp||0)),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'₹'+parseFloat(it.rate).toFixed(2)),hasDisc&&h('td',{style:{textAlign:'right',color:parseFloat(discRupee)>0?'#c00':'inherit'}},parseFloat(discRupee)>0?'-₹'+discRupee:'—'),taxInc&&h('td',{style:{textAlign:'right'}},'₹'+c.base),h('td',{style:{textAlign:'right'}},'₹'+c.tot))}).filter(Boolean),
-                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.sub)),
-                            (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'Discount '+(parseFloat(discountAmount)>0?'(₹'+discountAmount+')':'('+discount+'%)')+':'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'-₹'+tots.discAmt)),
-                            (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold'}},'₹'+tots.afterDisc)),
-                            taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'₹'+tots.cg)),
-                            taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'₹'+tots.sg)),
+                            items.map((it,idx)=>{if(!it.name)return null;const c=calcLine(it);const freeText=(it.freeQty&&parseFloat(it.freeQty)>0)?`${it.freeQty} ${it.freeUnit||'Pcs'}`:'0';const discRupee=(parseFloat(it.rate)*parseFloat(it.qty||1)-parseFloat(c.tot)).toFixed(2);return h('tr',{key:it.id},h('td',{},idx+1),h('td',{},it.name),h('td',{},it.hsn),hasMrp&&h('td',{style:{textAlign:'right'}},'Γé╣'+(it.mrp||0)),h('td',{},it.qty),h('td',{},it.unit),h('td',{},freeText),h('td',{style:{textAlign:'right'}},'Γé╣'+parseFloat(it.rate).toFixed(2)),hasDisc&&h('td',{style:{textAlign:'right',color:parseFloat(discRupee)>0?'#c00':'inherit'}},parseFloat(discRupee)>0?'-Γé╣'+discRupee:'ΓÇö'),taxInc&&h('td',{style:{textAlign:'right'}},'Γé╣'+c.base),h('td',{style:{textAlign:'right'}},'Γé╣'+c.tot))}).filter(Boolean),
+                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold'}},'Subtotal:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold'}},'Γé╣'+tots.sub)),
+                            (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'Discount '+(parseFloat(discountAmount)>0?'(Γé╣'+discountAmount+')':'('+discount+'%)')+':'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'-Γé╣'+tots.discAmt)),
+                            (parseFloat(discount)>0||parseFloat(discountAmount)>0)&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold'}},'After Discount:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold'}},'Γé╣'+tots.afterDisc)),
+                            taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'CGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'Γé╣'+tots.cg)),
+                            taxInc&&h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right'}},'SGST @ 2.5%:'),h('td',{colSpan:rightSpan,style:{textAlign:'right'}},'Γé╣'+tots.sg)),
                             h('tr',{},h('td',{colSpan:leftSpan+rightSpan,style:{textAlign:'right',fontSize:'10px',color:'#555',paddingTop:'4px'}},'Total Qty: '+tots.tq)),
-                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'₹'+tots.gt))
+                            h('tr',{},h('td',{colSpan:leftSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'GRAND TOTAL:'),h('td',{colSpan:rightSpan,style:{textAlign:'right',fontWeight:'bold',fontSize:'16px'}},'Γé╣'+tots.gt))
                         )];})()
                     ),
-                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'13px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'13px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Bank: '+(config?.bankName||'')),config?.branchName&&h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Branch: '+(config?.branchName||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'A/C: '+(config?.accountNo||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'IFSC: '+(config?.ifsc||''))),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'13px',margin:'2px 0'}},'For '+(config?.name||'Business')),h('div',{className:'signature-gap',style:{height:'60px'}}),h('p',{style:{fontSize:'13px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'11px',marginTop:'8px',borderTop:'1px dashed #aaa',paddingTop:'6px',fontStyle:'italic'}},h('strong',{},'Terms: '),'Cheque Bouncing Charges ₹500. Thank you for your business!'))
+                    h('div',{className:'print-footer'},h('p',{style:{fontSize:'13px',marginBottom:'15px'}},h('strong',{},'Amount in Words: '),tots.words),h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'20px'}},h('div',{},h('p',{style:{fontSize:'13px',margin:'2px 0'}},h('strong',{},'Bank Details:')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Bank: '+(config?.bankName||'')),config?.branchName&&h('p',{style:{fontSize:'12px',margin:'2px 0'}},'Branch: '+(config?.branchName||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'A/C: '+(config?.accountNo||'')),h('p',{style:{fontSize:'12px',margin:'2px 0'}},'IFSC: '+(config?.ifsc||''))),h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:'13px',margin:'2px 0'}},'For '+(config?.name||'Business')),h('div',{className:'signature-gap',style:{height:'60px'}}),h('p',{style:{fontSize:'13px',margin:'2px 0',borderTop:'1px solid #000',paddingTop:'5px'}},'Authorized Signatory'))),h('p',{style:{textAlign:'center',fontSize:'11px',marginTop:'8px',borderTop:'1px dashed #aaa',paddingTop:'6px',fontStyle:'italic'}},h('strong',{},'Terms: '),'Cheque Bouncing Charges Γé╣500. Thank you for your business!'))
                 )
             );
         };

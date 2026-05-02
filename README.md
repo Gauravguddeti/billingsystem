@@ -1,83 +1,36 @@
-# Smart GST Billing System
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A modern, cloud-based GST billing system with multi-user support, automatic data sync, and professional invoice generation.
+## Getting Started
 
-## 🚀 Features
+First, run the development server:
 
-### Core Functionality
-- ✅ **Search & Delete** - Search invoices by number or customer name, delete unwanted invoices
-- ✅ **Auto-incrementing Invoice Numbers** - Sequential INV-001, INV-002, etc.
-- ✅ **Smart Autocomplete** - Customer and product suggestions
-- ✅ **HSN Code** - Pre-configured to 33074100 for all products
-- ✅ **Tax Modes** - Toggle between tax-inclusive and tax-exclusive pricing
-- ✅ **Discount System** - Per-item and overall invoice discounts
-- ✅ **Free Items Column** - Track promotional/free items
-- ✅ **Product Rate List** - Master list of products with rates for quick billing
-- ✅ **Professional Print** - A4-optimized invoice format
-- ✅ **Date Range Export** - Export all invoices in a date range
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## 📋 Quick Start (Current LocalStorage Version)
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-**This version works completely offline with browser storage:**
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-1. Open `https://billingsystem1.vercel.app` in your browser
-2. Start creating invoices immediately
-3. Data saved in browser localStorage
-4. No setup required!
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## ☁️ Cloud Version (Supabase - Coming Soon)
+## Learn More
 
-For multi-user, cloud-synced version, see `supabase-schema.sql` for database setup.
+To learn more about Next.js, take a look at the following resources:
 
-Benefits of cloud version:
-- 🔐 Secure authentication
-- ☁️ Data synced across devices
-- 👥 Multiple users with isolated data
-- 💾 Automatic cloud backup
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## 📱 Usage
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-### Creating an Invoice
-1. Click "Invoice" tab
-2. Enter customer details (autocomplete suggests existing customers)
-3. Add items (autocomplete suggests products with rates)
-4. Apply discounts if needed
-5. Toggle "Tax Included?" if prices already include GST
-6. Click "Save & Print"
+## Deploy on Vercel
 
-### Managing Products
-1. Go to "Products" tab
-2. Click "Add Product"
-3. Enter product name and rate
-4. Products auto-fill when creating invoices
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### Viewing History
-1. Go to "History" tab
-2. Use search box to filter by invoice # or customer name
-3. Filter by date range
-4. Click "Reprint" to print again
-5. Click delete (🗑) to remove invoice
-
-## 🐛 Current Limitations
-
-- Data stored in browser (clearing cache = data loss)
-- Single user only
-- No cloud backup
-- No device sync
-
-## 🚀 Upcoming: Cloud Version
-
-We're working on a Supabase-integrated version with:
-- Multi-user authentication
-- Cloud data storage
-- Cross-device sync
-- Automatic backups
-- Team collaboration
-
-## 📄 License
-
-MIT License - feel free to use for personal or commercial projects
-
----
-
-Made with ❤️ for small businesses
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
