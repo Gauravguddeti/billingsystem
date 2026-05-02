@@ -763,22 +763,20 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
         </div>
       )}
 
-      {/* Hidden print container for normal Ctrl+P */}
-      {!showPrintPreview && (
-        <InvoicePrint 
-          invoice={{
-            id: '', user_id: '', invoice_number: invoiceNumber, date: invoiceDate,
-            customer_name: customerName, customer_address: customerAddress, customer_phone: customerPhone, customer_gstin: customerGstin,
-            tax_inclusive: taxBillMode, discount: overallDiscPct, subtotal, discount_amount: discAmt,
-            after_discount: afterDisc, cgst: cgstTotal, sgst: sgstTotal, grand_total: grandTotal,
-            total_quantity: totalQty, total_items: validItemCount, amount_words: numberToWords(Math.round(grandTotal))
-          }}
-          items={processedItems}
-          business={businessData || { id: '', user_id: '', name: 'My Business' }}
-          gstEnabled={taxBillMode}
-          previewMode={false}
-        />
-      )}
+      {/* Hidden print container for normal Ctrl+P and modal Print */}
+      <InvoicePrint 
+        invoice={{
+          id: '', user_id: '', invoice_number: invoiceNumber, date: invoiceDate,
+          customer_name: customerName, customer_address: customerAddress, customer_phone: customerPhone, customer_gstin: customerGstin,
+          tax_inclusive: taxBillMode, discount: overallDiscPct, subtotal, discount_amount: discAmt,
+          after_discount: afterDisc, cgst: cgstTotal, sgst: sgstTotal, grand_total: grandTotal,
+          total_quantity: totalQty, total_items: validItemCount, amount_words: numberToWords(Math.round(grandTotal))
+        }}
+        items={processedItems}
+        business={businessData || { id: '', user_id: '', name: 'My Business' }}
+        gstEnabled={taxBillMode}
+        previewMode={false}
+      />
       {/* Mobile Sticky Action Bar */}
       <div className="md:hidden fixed bottom-[60px] left-0 right-0 bg-white border-t border-gray-200 p-3 flex gap-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-40 no-print">
          <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg font-bold flex-1 min-h-[48px] shadow-md">

@@ -64,7 +64,7 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
           .small-invoice .invoice-table { font-size: 10px !important; margin: 5px 0 !important; }
           .small-invoice .invoice-table th, .small-invoice .invoice-table td { padding: 3px 5px !important; }
         }
-        ${!previewMode ? '@media screen { .print-container { display: none; } }' : ''}
+        ${!previewMode ? '@media screen { .print-container:not(.preview-mode) { display: none; } }' : ''}
       `}} />
       <div id="print-area" className={`print-container bg-white text-black ${isSmall ? 'small-invoice' : ''} ${previewMode ? 'preview-mode shadow-2xl p-8 max-w-4xl mx-auto mb-8' : ''}`}>
         
