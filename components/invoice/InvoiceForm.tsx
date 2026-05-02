@@ -77,7 +77,11 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
           setCustomerAddress(data.customer_address || '');
           setCustomerPhone(data.customer_phone || '');
           setCustomerGstin(data.customer_gstin || '');
-          setInvoiceDate(data.date || new Date().toISOString().split('T')[0]);
+          setInvoiceDate(
+            data.date 
+              ? new Date(data.date).toLocaleDateString('en-CA') 
+              : new Date().toLocaleDateString('en-CA')
+          );
           setTaxBillMode(data.tax_inclusive || false);
           setOverallDiscount(data.discount || 0);
           setCategoryId(data.category_id || '');
@@ -122,7 +126,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     setOverallDiscount(0);
     setTaxBillMode(false);
     setOverallDiscPct(0);
-    setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setInvoiceDate(new Date().toLocaleDateString('en-CA'));
     setCategoryId('');
     
     // Refresh invoice number

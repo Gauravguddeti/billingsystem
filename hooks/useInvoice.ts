@@ -26,7 +26,7 @@ export function useInvoice() {
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerGstin, setCustomerGstin] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([{ ...defaultRow }]);
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [taxInclusive, setTaxInclusive] = useState(false);
   const [overallDiscount, setOverallDiscount] = useState(0);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function useInvoice() {
         setCustomerAddress(parsed.customerAddress || '');
         setCustomerGstin(parsed.customerGstin || '');
         setItems(parsed.items?.length > 0 ? parsed.items : [{ ...defaultRow }]);
-        setInvoiceDate(parsed.invoiceDate || new Date().toISOString().split('T')[0]);
+        setInvoiceDate(parsed.invoiceDate || new Date().toLocaleDateString('en-CA'));
         setTaxInclusive(parsed.taxInclusive || false);
         setOverallDiscount(parsed.overallDiscount || 0);
         setCategoryId(parsed.categoryId || '');
