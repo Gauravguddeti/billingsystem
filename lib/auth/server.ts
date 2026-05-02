@@ -1,5 +1,7 @@
 import { createNeonAuth } from '@neondatabase/auth/next/server';
 
+// Force trusted origins so better-auth doesn't reject production Vercel aliases
+process.env.BETTER_AUTH_URL = 'https://billingsystem1.vercel.app';
 process.env.BETTER_AUTH_TRUSTED_ORIGINS = [
   'https://billingsystem1.vercel.app',
   'https://billingsystem-yourchads-projects.vercel.app',
