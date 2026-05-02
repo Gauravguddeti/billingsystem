@@ -740,7 +740,11 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
             <button onClick={() => setShowPrintPreview(false)} className="text-gray-600 font-bold px-4 py-2 bg-gray-100 rounded-lg active:bg-gray-200">Cancel</button>
             <h2 className="font-bold text-xl text-gray-800">Print Preview</h2>
             <button onClick={() => {
+               const originalTitle = document.title;
+               const sanitizedCustomer = customerName.trim().replace(/[^a-zA-Z0-9]/g, '_') || 'Customer';
+               document.title = `${invoiceNumber}_${sanitizedCustomer}_${invoiceDate}`;
                window.print();
+               setTimeout(() => { document.title = originalTitle; }, 500);
             }} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 py-2 rounded-lg font-bold shadow-md active:opacity-80 flex items-center gap-2">
               🖨 Print / PDF
             </button>
