@@ -27,6 +27,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     categoryId, setCategoryId
   } = useInvoice();
 
+  const [step, setStep] = useState<1 | 2>(initialInvoiceId ? 2 : 1);
   const [invoiceNumber, setInvoiceNumber] = useState('INV-001');
   const [overallDiscPct, setOverallDiscPct] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
@@ -313,6 +314,59 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     }
   };
 
+  if (step === 1) {
+    return (
+      <>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={toast.onClose} />}
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg mx-auto text-center border-t-4 border-indigo-600 mt-12 md:mt-24">
+          <h2 className="text-3xl font-black text-gray-900 mb-2">Invoice Setup</h2>
+          <p className="text-gray-500 mb-8 font-medium">Choose the category and bill type to begin.</p>
+          
+          <div className="space-y-8 text-left">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">1. Select Category</label>
+              <select 
+                value={categoryId}
+                onChange={e => setCategoryId(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl p-4 min-h-[56px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition text-gray-900 font-semibold text-lg cursor-pointer bg-gray-50 hover:bg-white"
+              >
+                <option value="">— All Products —</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">2. Select Bill Type</label>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setTaxBillMode(false)} 
+                  className={`flex-1 p-4 rounded-xl border-2 font-bold transition shadow-sm ${!taxBillMode ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Normal Bill
+                </button>
+                <button 
+                  onClick={() => setTaxBillMode(true)} 
+                  className={`flex-1 p-4 rounded-xl border-2 font-bold transition shadow-sm ${taxBillMode ? 'border-green-500 bg-green-50 text-green-700 ring-2 ring-green-500/20' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Tax Bill (GST)
+                </button>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setStep(2)} 
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-5 rounded-xl font-bold mt-4 hover:opacity-90 hover:scale-[1.02] transition-all text-xl shadow-lg flex justify-center items-center gap-2"
+            >
+              Start Billing <span>→</span>
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div 
@@ -431,28 +485,15 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
             )}
           </div>
 
-          <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Invoice Date</label>
               <input 
                 type="date" 
                 value={invoiceDate}
                 onChange={e => setInvoiceDate(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900"
+                className="w-full md:w-64 border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Bill Category</label>
-              <select 
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900"
-              >
-                <option value="">— All Products —</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -499,20 +540,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
             onChange={e => setInvoiceNumber(e.target.value)}
             className="w-full md:w-64 border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition font-mono font-semibold"
           />
-        </div>
-
-        {/* Bill Mode Toggle — matches original: Tax Bill = GST inclusive, Normal Bill = no GST */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-500">Normal Bill</span>
-            <button
-              onClick={() => setTaxBillMode(!taxBillMode)}
-              className={`relative inline-flex h-8 w-16 items-center rounded-full transition ${taxBillMode ? 'bg-green-500' : 'bg-gray-300'}`}
-            >
-              <span className={`inline-block h-6 w-6 rounded-full bg-white transform transition ${taxBillMode ? 'translate-x-9' : 'translate-x-1'}`} />
-            </button>
-            <span className={`text-sm font-semibold ${taxBillMode ? 'text-green-700' : 'text-gray-500'}`}>Tax Bill (GST 5% inclusive)</span>
-          </div>
         </div>
 
         {/* Items Table */}

@@ -137,7 +137,7 @@ export function CustomerList() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Table List */}
       {filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center border-2 border-dashed border-gray-200">
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -146,40 +146,34 @@ export function CustomerList() {
           <button onClick={openNew} className="text-purple-600 font-bold hover:underline">Add Customer</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(c => (
-            <div key={c.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition flex flex-col">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-bold text-lg text-gray-800 break-words flex-1 pr-2">{c.name}</h3>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 className="w-4 h-4" /></button>
-                  <button onClick={() => handleDelete(c.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mt-auto">
-                {c.phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="w-4 h-4 text-gray-400" /> {c.phone}
-                  </div>
-                )}
-                {c.gstin && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText className="w-4 h-4 text-gray-400" /> {c.gstin}
-                  </div>
-                )}
-                {c.address && (
-                  <div className="flex items-start gap-2 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" /> 
-                    <span className="line-clamp-2">{c.address}</span>
-                  </div>
-                )}
-                {!c.phone && !c.gstin && !c.address && (
-                  <div className="text-sm text-gray-400 italic">No additional details</div>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-700">Name</th>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-700">Phone</th>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-700">GSTIN</th>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-700">Address</th>
+                <th className="px-4 py-3 text-xs font-semibold text-gray-700 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map(c => (
+                <tr key={c.id} className="hover:bg-gray-50 transition">
+                  <td className="px-4 py-3 text-sm font-bold text-gray-800">{c.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{c.phone || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{c.gstin || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 truncate max-w-xs">{c.address || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(c.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
