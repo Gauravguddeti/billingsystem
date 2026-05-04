@@ -23,3 +23,30 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const user = await getOrCreateUser(session.user.id, session.user.email, session.user.name);
+    const body = await request.json();
+    const { name, address, phone, gstin } = body;
+    
+    if (!name) return Response.json({ error: 'Customer name is required' }, { status: 400 });
+
+    const newCustomer = await sql`
+      INSERT INTO customers (user_id, name, address, phone, gstin)
+      VALUES (${user.id}, ${name}, ${address || null}, ${phone || null}, ${gstin || null})
+      RETURNING *
+    `;
+    
+    return Response.json(newCustomer[0]);
+  } catch (error: any) {
+    console.error('API Error:', error);
+    if (error.code === '23505') {
+      return Response.json({ error: 'Customer already exists' }, { status: 409 });
+    }
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

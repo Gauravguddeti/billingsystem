@@ -20,7 +20,7 @@ export function Toast({ message, type = 'info', onClose, duration = 4000 }: Toas
   };
 
   return (
-    <div className={`fixed bottom-4 right-4 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-slide-up`}>
+    <div className={`fixed bottom-4 right-4 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-slide-up print:hidden`}>
       <span>{message}</span>
       <button onClick={onClose} className="text-white hover:text-gray-200 focus:outline-none">
         ✕

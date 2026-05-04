@@ -74,8 +74,8 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
         <div className="print-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <div>
-              <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 10px 0' }}>
-                {business?.name || 'Business Name'}
+              <h1 className="font-black text-black" style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 10px 0' }}>
+                <strong>{business?.name || 'Business Name'}</strong>
               </h1>
               <p style={{ margin: '2px 0', fontSize: '13px' }}>{business?.address || ''}</p>
               <p style={{ margin: '2px 0', fontSize: '13px' }}>GSTIN: {business?.gstin || ''}</p>
@@ -97,7 +97,7 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
 
           <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #000' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 5px 0' }}>Bill To:</h3>
-            <p style={{ margin: '2px 0', fontSize: '13px' }}><strong>{invoice.customer_name}</strong></p>
+            <p style={{ margin: '2px 0', fontSize: '14px', fontWeight: 'bold' }}>{invoice.customer_name}</p>
             <p style={{ margin: '2px 0', fontSize: '13px' }}>{invoice.customer_address}</p>
             {invoice.customer_phone && (
               <p style={{ margin: '2px 0', fontSize: '13px' }}>Phone: {invoice.customer_phone}</p>

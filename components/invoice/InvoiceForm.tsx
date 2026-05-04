@@ -545,7 +545,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                       value={item.item_name}
                       ref={el => { inputRefs.current[index] = el; }}
                       onChange={e => handleItemChange(index, 'item_name', e.target.value)}
-                      onFocus={e => openItemDropdown(index, e.currentTarget)}
+                      onFocus={e => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }); openItemDropdown(index, e.currentTarget); }}
                       onBlur={() => setTimeout(() => { setActiveItemAuto(null); setDropdownPos(null); }, 200)}
                       onKeyDown={e => {
                         const filtered = products.filter(p => p.name.toLowerCase().includes(item.item_name.toLowerCase()) && p.name !== item.item_name);
@@ -580,7 +580,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                   </div>
                   <div className="flex flex-col justify-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Qty</label>
-                    <input type="number" min="0" step="0.01" value={item.quantity || ''} onChange={e => handleItemChange(index, 'quantity', e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none font-bold" />
+                    <input type="number" min="0" step="0.01" value={item.quantity || ''} onChange={e => handleItemChange(index, 'quantity', e.target.value)} onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none font-bold" />
                   </div>
                   <div className="flex flex-col justify-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Unit</label>
@@ -594,7 +594,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                   </div>
                   <div className="flex flex-col justify-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Rate (₹)</label>
-                    <input type="number" min="0" step="0.01" value={item.rate || ''} onChange={e => handleItemChange(index, 'rate', e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none" />
+                    <input type="number" min="0" step="0.01" value={item.rate || ''} onChange={e => handleItemChange(index, 'rate', e.target.value)} onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none" />
                   </div>
                   <div className="flex flex-col justify-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Disc (₹)</label>

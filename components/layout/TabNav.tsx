@@ -3,13 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Package, History, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, Package, History, Settings, Users } from 'lucide-react';
 import { NavItem } from '@/types';
 
 const tabs: NavItem[] = [
   { icon: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { icon: 'invoice', label: 'Invoice', href: '/invoice' },
   { icon: 'products', label: 'Products', href: '/products' },
+  { icon: 'customers', label: 'Customers', href: '/customers' },
   { icon: 'history', label: 'History', href: '/history' },
   { icon: 'settings', label: 'Settings', href: '/settings' },
 ];
@@ -18,6 +19,7 @@ const iconMap = {
   dashboard: LayoutDashboard,
   invoice: FileText,
   products: Package,
+  customers: Users,
   history: History,
   settings: Settings,
 };
