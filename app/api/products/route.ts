@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
     const user = await getOrCreateUser(session.user.id, session.user.email, session.user.name);
     const body = await request.json();
     const { name, rate, mrp, hsn, category_id } = body;
-    if (!name) return Response.json({ error: 'Product name is required' }, { status: 400 });
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return Response.json({ error: 'Valid product name is required' }, { status: 400 });
+    }
 
     const newProduct = await sql`
       INSERT INTO product_rates (user_id, name, rate, mrp, hsn, category_id)

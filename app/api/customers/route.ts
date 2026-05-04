@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, address, phone, gstin } = body;
     
-    if (!name) return Response.json({ error: 'Customer name is required' }, { status: 400 });
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return Response.json({ error: 'Valid customer name is required' }, { status: 400 });
+    }
 
     const newCustomer = await sql`
       INSERT INTO customers (user_id, name, address, phone, gstin)

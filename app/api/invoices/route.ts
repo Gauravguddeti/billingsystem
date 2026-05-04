@@ -68,21 +68,41 @@ export async function POST(request: NextRequest) {
     
     const invId = invs[0].id;
     
-    // 2. Insert Items
+    // 2. Insert Items (Bulk Insert to avoid N+1 queries)
     if (items && items.length > 0) {
-      for (const item of items) {
-        await sql`
-          INSERT INTO invoice_items (
-            invoice_id, item_name, hsn, quantity, unit, rate, 
-            free_qty, free_unit, discount, base_amount, 
-            cgst, sgst, total, mrp, discount_amount
-          ) VALUES (
-            ${invId}, ${item.item_name}, ${item.hsn}, ${item.quantity}, ${item.unit}, ${item.rate},
-            ${item.free_qty || 0}, ${item.free_unit || 'Pcs'}, ${item.discount || 0}, ${item.base_amount},
-            ${item.cgst}, ${item.sgst}, ${item.total}, ${item.mrp || 0}, ${item.discount_amount || 0}
-          )
-        `;
-      }
+      const cleanItems = items.map((item: any) => ({
+        item_name: item.item_name,
+        hsn: item.hsn,
+        quantity: item.quantity,
+        unit: item.unit,
+        rate: item.rate,
+        free_qty: item.free_qty || 0,
+        free_unit: item.free_unit || 'Pcs',
+        discount: item.discount || 0,
+        base_amount: item.base_amount,
+        cgst: item.cgst,
+        sgst: item.sgst,
+        total: item.total,
+        mrp: item.mrp || 0,
+        discount_amount: item.discount_amount || 0
+      }));
+
+      await sql`
+        INSERT INTO invoice_items (
+          invoice_id, item_name, hsn, quantity, unit, rate, 
+          free_qty, free_unit, discount, base_amount, 
+          cgst, sgst, total, mrp, discount_amount
+        )
+        SELECT 
+          ${invId}, item_name, hsn, quantity, unit, rate, 
+          free_qty, free_unit, discount, base_amount, 
+          cgst, sgst, total, mrp, discount_amount
+        FROM jsonb_to_recordset(${JSON.stringify(cleanItems)}::jsonb) AS x(
+          item_name text, hsn text, quantity numeric, unit text, rate numeric,
+          free_qty numeric, free_unit text, discount numeric, base_amount numeric,
+          cgst numeric, sgst numeric, total numeric, mrp numeric, discount_amount numeric
+        )
+      `;
     }
     
     // 3. Upsert Customer (Optional auto-save feature)

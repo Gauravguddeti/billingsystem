@@ -16,15 +16,11 @@ export async function GET(request: NextRequest) {
       WHERE user_id = ${user.id}
     `;
 
-    const thisMonthStart = new Date();
-    thisMonthStart.setDate(1);
-    thisMonthStart.setHours(0, 0, 0, 0);
-
     const [monthStats] = await sql`
       SELECT 
         COALESCE(SUM(grand_total), 0) as this_month_revenue
       FROM invoices 
-      WHERE user_id = ${user.id} AND date >= ${thisMonthStart.toISOString().split('T')[0]}
+      WHERE user_id = ${user.id} AND date >= to_char(date_trunc('month', CURRENT_DATE), 'YYYY-MM-DD')
     `;
 
     const [custStats] = await sql`
