@@ -59,7 +59,7 @@ export function calculateTotals(
       cgst: 0,   // Line-level GST is 0; totals computed at invoice level
       sgst: 0,
       total: afterItemDisc,  // Line total = what customer pays
-      discount_amount: itemDiscAmt > 0 ? itemDiscAmt * qty : gross * itemDiscPct / 100,
+      line_discount_amount: itemDiscAmt > 0 ? itemDiscAmt * qty : gross * itemDiscPct / 100, // Total discount for this line
     };
   });
 

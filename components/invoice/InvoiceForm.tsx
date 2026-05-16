@@ -51,6 +51,17 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
   const [businessData, setBusinessData] = useState<any>(null); // To pass to InvoicePrint
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const [isSaved, setIsSaved] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+
+  useEffect(() => {
+    if (isDraftRestored) setStep(2);
+  }, [isDraftRestored]);
+
+  useEffect(() => {
+    setIsSaved(false);
+  }, [customerName, customerPhone, customerAddress, customerGstin, items, invoiceDate, taxBillMode, overallDiscount, overallDiscPct, categoryId]);
+
   // Data fetching
   useEffect(() => {
     fetch('/api/products').then(res => res.json()).then(data => {
@@ -115,7 +126,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
 
   const { processedItems, subtotal, cgstTotal, sgstTotal, grandTotal, discAmt, afterDisc, totalQty, validItemCount } = calculateTotals(items, taxBillMode, overallDiscount, overallDiscPct);
 
-  const handleNewInvoice = () => {
+  const proceedWithNewInvoice = () => {
     setIsEditMode(false);
     setEditingInvoiceId(null);
     localStorage.removeItem('invoiceDraft');
@@ -129,6 +140,8 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     setOverallDiscPct(0);
     setInvoiceDate(new Date().toLocaleDateString('en-CA'));
     setCategoryId('');
+    setIsSaved(true);
+    setStep(1);
     
     // Refresh invoice number
     fetch('/api/invoices?limit=1').then(res => res.json()).then(data => {
@@ -136,6 +149,15 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
         setInvoiceNumber(generateNextInvoiceNumber(data[0].invoice_number));
       }
     });
+  };
+
+  const handleNewInvoice = () => {
+    // If not saved and not completely blank
+    if (!isSaved && (customerName || items.some(i => i.item_name))) {
+      setShowUnsavedModal(true);
+    } else {
+      proceedWithNewInvoice();
+    }
   };
 
   const handleItemChange = (index: number, field: string, value: any) => {
@@ -215,6 +237,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
       if (!res.ok) throw new Error('Failed to save invoice');
       
       setToast({ message: '✅ Invoice saved — review and print when ready', type: 'success', onClose: () => setToast(null) });
+      setIsSaved(true);
       
       // DO NOT clear form automatically, allow printing!
       // But we can clear the draft and edit mode so refreshing doesn't bring it back as a draft
@@ -387,10 +410,14 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
             <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
               {isEditMode ? `Edit ${invoiceNumber}` : 'New Invoice'}
             </h2>
-            {isDraftRestored && !isEditMode && <p className="text-xs text-orange-500 font-medium mt-1">Draft restored</p>}
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex items-center gap-2 mt-1">
+                {isDraftRestored && !isEditMode && <p className="text-xs text-orange-500 font-medium">Draft restored</p>}
+                {(customerName || items.some(i => i.item_name)) && (
+                  <p className={`text-xs font-semibold ${isSaved ? 'text-green-600' : 'text-red-500'}`}>
+                    {isSaved ? '• Saved' : '• Not saved'}
+                  </p>
+                )}
+              </div>
             <button onClick={handleNewInvoice} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 md:py-2 rounded-lg transition font-semibold flex-1 md:flex-none text-center min-h-[44px]">
               🆕 New
             </button>
@@ -571,7 +598,11 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                       type="text" 
                       value={item.item_name}
                       ref={el => { inputRefs.current[index] = el; }}
-                      onChange={e => handleItemChange(index, 'item_name', e.target.value)}
+                        onChange={e => {
+                          handleItemChange(index, 'item_name', e.target.value);
+                          openItemDropdown(index, e.currentTarget);
+                        }}
+                        onClick={e => openItemDropdown(index, e.currentTarget)}
                         onFocus={e => { 
                           e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                           openItemDropdown(index, e.currentTarget); 
@@ -739,6 +770,33 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
 
       {toast && <Toast {...toast} />}
       
+      {/* Unsaved Changes Form Warning Modal */}
+      {showUnsavedModal && (
+        <div className="fixed inset-0 z-[250] bg-gray-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Unsaved Changes</h3>
+            <p className="text-gray-600 mb-6">You have unsaved changes in this invoice. Are you sure you want to discard them and create a new invoice?</p>
+            <div className="flex justify-end gap-3 flex-wrap">
+              <button 
+                onClick={() => setShowUnsavedModal(false)}
+                className="px-4 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition"
+              >
+                Keep Editing
+              </button>
+              <button 
+                onClick={() => {
+                  setShowUnsavedModal(false);
+                  proceedWithNewInvoice();
+                }}
+                className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
+              >
+                Discard & New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <MultiOrderModal 
         isOpen={showMultiModal} 
         onClose={() => setShowMultiModal(false)}
