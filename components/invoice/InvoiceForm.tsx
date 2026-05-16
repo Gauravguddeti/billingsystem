@@ -27,7 +27,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     categoryId, setCategoryId
   } = useInvoice();
 
-  const [step, setStep] = useState<1 | 2>(initialInvoiceId ? 2 : 1);
   const [invoiceNumber, setInvoiceNumber] = useState('INV-001');
   const [overallDiscPct, setOverallDiscPct] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
@@ -53,10 +52,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
 
   const [isSaved, setIsSaved] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-
-  useEffect(() => {
-    if (isDraftRestored) setStep(2);
-  }, [isDraftRestored]);
 
   useEffect(() => {
     setIsSaved(false);
@@ -141,7 +136,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     setInvoiceDate(new Date().toLocaleDateString('en-CA'));
     setCategoryId('');
     setIsSaved(true);
-    setStep(1);
     
     // Refresh invoice number
     fetch('/api/invoices?limit=1').then(res => res.json()).then(data => {
@@ -337,59 +331,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     }
   };
 
-  if (step === 1) {
-    return (
-      <>
-        {toast && <Toast message={toast.message} type={toast.type} onClose={toast.onClose} />}
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg mx-auto text-center border-t-4 border-indigo-600 mt-12 md:mt-24">
-          <h2 className="text-3xl font-black text-gray-900 mb-2">Invoice Setup</h2>
-          <p className="text-gray-500 mb-8 font-medium">Choose the category and bill type to begin.</p>
-          
-          <div className="space-y-8 text-left">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">1. Select Category</label>
-              <select 
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl p-4 min-h-[56px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition text-gray-900 font-semibold text-lg cursor-pointer bg-gray-50 hover:bg-white"
-              >
-                <option value="">— All Products —</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">2. Select Bill Type</label>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setTaxBillMode(false)} 
-                  className={`flex-1 p-4 rounded-xl border-2 font-bold transition shadow-sm ${!taxBillMode ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                >
-                  Normal Bill
-                </button>
-                <button 
-                  onClick={() => setTaxBillMode(true)} 
-                  className={`flex-1 p-4 rounded-xl border-2 font-bold transition shadow-sm ${taxBillMode ? 'border-green-500 bg-green-50 text-green-700 ring-2 ring-green-500/20' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                >
-                  Tax Bill (GST)
-                </button>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setStep(2)} 
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-5 rounded-xl font-bold mt-4 hover:opacity-90 hover:scale-[1.02] transition-all text-xl shadow-lg flex justify-center items-center gap-2"
-            >
-              Start Billing <span>→</span>
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <div 
@@ -405,11 +346,11 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
         )}
         <div className="relative">
           {/* Header Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-6 border-b border-gray-200 gap-4">
-          <div>
-            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
-              {isEditMode ? `Edit ${invoiceNumber}` : 'New Invoice'}
-            </h2>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-6 border-b border-gray-200 gap-4">
+            <div className="flex flex-col">
+              <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
+                {isEditMode ? `Edit ${invoiceNumber}` : 'New Invoice'}
+              </h2>
               <div className="flex items-center gap-2 mt-1">
                 {isDraftRestored && !isEditMode && <p className="text-xs text-orange-500 font-medium">Draft restored</p>}
                 {(customerName || items.some(i => i.item_name)) && (
@@ -418,50 +359,66 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                   </p>
                 )}
               </div>
-            <button onClick={handleNewInvoice} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 md:py-2 rounded-lg transition font-semibold flex-1 md:flex-none text-center min-h-[44px]">
-              🆕 New
-            </button>
-            <ImportOrderButton 
-              onExtractSuccess={(order) => {
-                setCustomerName(order.customerName || '');
-                setCustomerAddress(order.customerAddress || '');
-                if (order.date) setInvoiceDate(order.date);
-                
-                const validItems = order.items.filter(i => Number(i.qty) > 0);
-                const newItems = validItems.map((i, idx) => {
-                  const prod = products.find(p => p.name.toLowerCase() === i.name.toLowerCase());
-                  return {
-                    ...defaultRow,
-                    id: Date.now().toString() + idx,
-                    item_name: i.name,
-                    quantity: i.qty,
-                    rate: prod?.rate ?? i.rate ?? 0,
-                    mrp: prod?.mrp ?? 0,
-                    hsn: prod?.hsn ?? '33074100'
-                  };
-                });
-                setItems(newItems.length > 0 ? newItems : [{...defaultRow}]);
-                setToast({ message: '✅ Order extracted', type: 'success', onClose: () => setToast(null) });
-              }}
-              onMultipleOrders={(orders) => {
-                setMultiOrders(orders);
-                setShowMultiModal(true);
-              }}
-              onError={(msg) => setToast({ message: msg, type: 'error', onClose: () => setToast(null) })}
-            />
-            {/* Desktop Save/Print */}
-            <div className="hidden md:flex items-center gap-3">
-              <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-semibold disabled:opacity-50 text-center min-h-[44px]">
-                {saving ? 'Saving...' : '💾 Save'}
+            </div>
+
+            <div className="flex-1 w-full md:w-auto flex justify-start md:justify-center">
+              <div className="w-full md:w-[220px]">
+                <div className="text-xs font-semibold text-gray-500 mb-1 text-left md:text-center">Bill Type</div>
+                <select
+                  value={taxBillMode ? 'tax' : 'normal'}
+                  onChange={(e) => setTaxBillMode(e.target.value === 'tax')}
+                  className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-base rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2 font-bold cursor-pointer transition w-full"
+                >
+                  <option value="normal">📄 Normal Bill</option>
+                  <option value="tax">🧾 Tax Bill (GST)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0 justify-start md:justify-end">
+              <button onClick={handleNewInvoice} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 md:py-2 rounded-lg transition font-semibold flex-1 md:flex-none text-center min-h-[44px]">
+                🆕 New
               </button>
-              {validItemCount > 0 && (
-                <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg transition font-semibold text-center min-h-[44px]">
-                  🖨 Print
+              <ImportOrderButton
+                onExtractSuccess={(order) => {
+                  setCustomerName(order.customerName || '');
+                  setCustomerAddress(order.customerAddress || '');
+                  if (order.date) setInvoiceDate(order.date);
+
+                  const validItems = order.items.filter(i => Number(i.qty) > 0);
+                  const newItems = validItems.map((i, idx) => {
+                    const prod = products.find(p => p.name.toLowerCase() === i.name.toLowerCase());
+                    return {
+                      ...defaultRow,
+                      id: Date.now().toString() + idx,
+                      item_name: i.name,
+                      quantity: i.qty,
+                      rate: prod?.rate ?? i.rate ?? 0,
+                      mrp: prod?.mrp ?? 0,
+                      hsn: prod?.hsn ?? '33074100'
+                    };
+                  });
+                  setItems(newItems.length > 0 ? newItems : [{...defaultRow}]);
+                  setToast({ message: '✅ Order extracted', type: 'success', onClose: () => setToast(null) });
+                }}
+                onMultipleOrders={(orders) => {
+                  setMultiOrders(orders);
+                  setShowMultiModal(true);
+                }}
+                onError={(msg) => setToast({ message: msg, type: 'error', onClose: () => setToast(null) })}
+              />
+              <div className="hidden md:flex items-center gap-3">
+                <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-semibold disabled:opacity-50 text-center min-h-[44px]">
+                  {saving ? 'Saving...' : '💾 Save'}
                 </button>
-              )}
+                {validItemCount > 0 && (
+                  <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg transition font-semibold text-center min-h-[44px]">
+                    🖨 Print
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Customer & Settings */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -514,9 +471,22 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
 
           <div className="flex flex-col gap-4">
             <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+              <select
+                value={categoryId}
+                onChange={e => setCategoryId(e.target.value)}
+                className="w-full md:w-64 border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900 bg-white"
+              >
+                <option value="">— All Products —</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Invoice Date</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={invoiceDate}
                 onChange={e => setInvoiceDate(e.target.value)}
                 className="w-full md:w-64 border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900"
