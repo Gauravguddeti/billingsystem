@@ -572,10 +572,13 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                       value={item.item_name}
                       ref={el => { inputRefs.current[index] = el; }}
                       onChange={e => handleItemChange(index, 'item_name', e.target.value)}
-                      onFocus={e => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }); openItemDropdown(index, e.currentTarget); }}
-                      onBlur={() => setTimeout(() => { setActiveItemAuto(null); setDropdownPos(null); }, 200)}
-                      onKeyDown={e => {
-                        const filtered = products.filter(p => p.name.toLowerCase().includes(item.item_name.toLowerCase()) && p.name !== item.item_name);
+                        onFocus={e => { 
+                          e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                          openItemDropdown(index, e.currentTarget); 
+                        }}
+                        onBlur={() => setTimeout(() => { setActiveItemAuto(null); setDropdownPos(null); }, 200)}
+                        onKeyDown={e => {
+                          const filtered = products.filter(p => p.name.toLowerCase().includes(item.item_name.toLowerCase()));
                         if (e.key === 'ArrowDown') { e.preventDefault(); setItemAutoHighlight(h => Math.min(h + 1, filtered.length - 1)); }
                         else if (e.key === 'ArrowUp') { e.preventDefault(); setItemAutoHighlight(h => Math.max(h - 1, 0)); }
                         else if (e.key === 'Enter' && itemAutoHighlight >= 0 && filtered[itemAutoHighlight]) {
@@ -625,7 +628,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                   </div>
                   <div className="flex flex-col justify-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Disc (₹)</label>
-                    <input type="number" min="0" step="0.01" value={item.discount_amount || ''} onChange={e => handleItemChange(index, 'discount_amount', e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none text-red-600" />
+                    <input type="number" min="0" step="0.01" value={item.discount_amount === 0 ? '' : item.discount_amount} onChange={e => handleItemChange(index, 'discount_amount', e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none text-red-600" />
                   </div>
                 </div>
 
@@ -652,8 +655,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
           if (!currentItem) return null;
           const filtered = products.filter(p => 
             (!categoryId || !p.category_id || p.category_id === categoryId) && 
-            p.name.toLowerCase().includes((currentItem.item_name || '').toLowerCase()) && 
-            p.name !== currentItem.item_name
+            p.name.toLowerCase().includes((currentItem.item_name || '').toLowerCase())
           );
           if (filtered.length === 0) return null;
           return createPortal(
@@ -710,8 +712,8 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
               <span className="whitespace-nowrap">Discount:</span>
               <div className="flex items-center gap-1">
                 <input type="number" min="0" step="0.01"
-                  value={overallDiscPct || ''}
-                  onChange={e => { setOverallDiscPct(Number(e.target.value) || 0); setOverallDiscount(0); }}
+                    value={overallDiscPct === 0 ? '' : overallDiscPct}
+                    onChange={e => { setOverallDiscPct(e.target.value === '' ? 0 : Number(e.target.value)); setOverallDiscount(0); }}
                   className="w-16 border border-gray-300 rounded p-1 text-right focus:border-indigo-500 outline-none"
                   placeholder="%"
                 />
@@ -719,8 +721,8 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                 <span className="text-gray-400 mx-1">or</span>
                 <span className="text-gray-400">₹</span>
                 <input type="number" min="0" step="0.01"
-                  value={overallDiscount || ''}
-                  onChange={e => { setOverallDiscount(Number(e.target.value) || 0); setOverallDiscPct(0); }}
+                    value={overallDiscount === 0 ? '' : overallDiscount}
+                    onChange={e => { setOverallDiscount(e.target.value === '' ? 0 : Number(e.target.value)); setOverallDiscPct(0); }}
                   className="w-20 border border-gray-300 rounded p-1 text-right focus:border-indigo-500 outline-none"
                   placeholder="0"
                 />
