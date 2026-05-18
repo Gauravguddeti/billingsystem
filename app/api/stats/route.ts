@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
       SELECT 
         COALESCE(SUM(grand_total), 0) as this_month_revenue
       FROM invoices 
-      WHERE user_id = ${user.id} AND date >= to_char(date_trunc('month', CURRENT_DATE), 'YYYY-MM-DD')
+      WHERE user_id = ${user.id}
+        AND date >= date_trunc('month', CURRENT_DATE)::date
     `;
 
     const [custStats] = await sql`

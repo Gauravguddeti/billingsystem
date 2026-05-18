@@ -32,22 +32,55 @@ export function DashboardStats() {
   const topCustomers = stats.topCustomers || [];
   const recentInvoices = stats.recentInvoices || [];
 
+  const statCards = [
+    {
+      label: 'Total Revenue',
+      value: `₹${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      icon: <IndianRupee className="w-6 h-6" />,
+      borderClass: 'border-indigo-500',
+      iconBgClass: 'bg-indigo-50',
+      iconTextClass: 'text-indigo-500',
+    },
+    {
+      label: 'This Month',
+      value: `₹${thisMonthRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      icon: <TrendingUp className="w-6 h-6" />,
+      borderClass: 'border-green-500',
+      iconBgClass: 'bg-green-50',
+      iconTextClass: 'text-green-500',
+    },
+    {
+      label: 'Total Invoices',
+      value: stats.totalInvoices || 0,
+      icon: <FileText className="w-6 h-6" />,
+      borderClass: 'border-purple-500',
+      iconBgClass: 'bg-purple-50',
+      iconTextClass: 'text-purple-500',
+    },
+    {
+      label: 'Customers',
+      value: stats.totalCustomers || 0,
+      icon: <Users className="w-6 h-6" />,
+      borderClass: 'border-emerald-500',
+      iconBgClass: 'bg-emerald-50',
+      iconTextClass: 'text-emerald-500',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Revenue', value: `₹${totalRevenue.toLocaleString('en-IN', {minimumFractionDigits:2})}`, icon: <IndianRupee className="w-6 h-6" />, color: 'indigo' },
-          { label: 'This Month', value: `₹${thisMonthRevenue.toLocaleString('en-IN', {minimumFractionDigits:2})}`, icon: <TrendingUp className="w-6 h-6" />, color: 'green' },
-          { label: 'Total Invoices', value: stats.totalInvoices || 0, icon: <FileText className="w-6 h-6" />, color: 'purple' },
-          { label: 'Customers', value: stats.totalCustomers || 0, icon: <Users className="w-6 h-6" />, color: 'emerald' },
-        ].map((stat, i) => (
-          <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 border-${stat.color}-500 flex items-center justify-between hover:shadow-md transition`}>
+        {statCards.map((stat, i) => (
+          <div
+            key={i}
+            className={`bg-white rounded-xl shadow p-5 border-l-4 ${stat.borderClass} flex items-center justify-between hover:shadow-md transition`}
+          >
             <div>
               <p className="text-xs text-gray-500 font-semibold mb-1">{stat.label}</p>
               <h3 className="text-xl font-bold text-gray-800">{stat.value}</h3>
             </div>
-            <div className={`bg-${stat.color}-50 p-3 rounded-lg text-${stat.color}-500`}>{stat.icon}</div>
+            <div className={`${stat.iconBgClass} p-3 rounded-lg ${stat.iconTextClass}`}>{stat.icon}</div>
           </div>
         ))}
       </div>
