@@ -120,7 +120,7 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
               <th style={{ width: '6%' }}>Unit</th>
               <th style={{ width: '9%' }}>Free</th>
               <th style={{ width: gstEnabled ? '10%' : '15%', textAlign: 'right' }}>Rate</th>
-              {hasDisc && <th style={{ width: '10%', textAlign: 'right' }}>Disc(₹)</th>}
+              {hasDisc && <th style={{ width: '10%', textAlign: 'right' }}>Disc</th>}
               {gstEnabled && <th style={{ width: '11%', textAlign: 'right' }}>Taxable</th>}
               <th style={{ width: '15%', textAlign: 'right' }}>Total</th>
             </tr>
@@ -130,8 +130,9 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
               const freeText = (it.free_qty && Number(it.free_qty) > 0)
                 ? `${it.free_qty} ${it.free_unit || 'Pcs'}`
                 : '0';
-              // Check item discount amount exactly like the original
-              const discRupee = Number(it.discount_amount || 0).toFixed(2);
+              const discAmount = Number(it.discount_amount || 0);
+              const discPct = Number(it.discount || 0);
+              const discPctLabel = discPct % 1 === 0 ? discPct.toString() : discPct.toFixed(2);
               
               return (
                 <tr key={idx}>
@@ -144,8 +145,8 @@ export function InvoicePrint({ invoice, items, business, gstEnabled = true, prev
                   <td>{freeText}</td>
                   <td style={{ textAlign: 'right' }}>₹{Number(it.rate).toFixed(2)}</td>
                   {hasDisc && (
-                    <td style={{ textAlign: 'right', color: Number(discRupee) > 0 ? '#c00' : 'inherit' }}>
-                      {Number(discRupee) > 0 ? `-₹${discRupee}` : '—'}
+                    <td style={{ textAlign: 'right', color: discAmount > 0 || discPct > 0 ? '#c00' : 'inherit' }}>
+                      {discAmount > 0 ? `-₹${discAmount.toFixed(2)}` : discPct > 0 ? `${discPctLabel}%` : '—'}
                     </td>
                   )}
                   {gstEnabled && <td style={{ textAlign: 'right' }}>₹{Number(it.base_amount || 0).toFixed(2)}</td>}

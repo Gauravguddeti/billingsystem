@@ -168,6 +168,26 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     setItems(newItems);
   };
 
+  const handleItemDiscountPctChange = (index: number, value: string) => {
+    const newItems = [...items];
+    const parsed = value === '' ? 0 : Number(value);
+    newItems[index] = { ...newItems[index], discount: parsed };
+    if (value !== '') {
+      newItems[index].discount_amount = 0;
+    }
+    setItems(newItems);
+  };
+
+  const handleItemDiscountAmtChange = (index: number, value: string) => {
+    const newItems = [...items];
+    const parsed = value === '' ? 0 : Number(value);
+    newItems[index] = { ...newItems[index], discount_amount: parsed };
+    if (value !== '') {
+      newItems[index].discount = 0;
+    }
+    setItems(newItems);
+  };
+
   const openItemDropdown = (index: number, inputEl: HTMLInputElement | null) => {
     if (inputEl) {
       const rect = inputEl.getBoundingClientRect();
@@ -550,7 +570,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
             <div>Unit</div>
             <div className="text-right">Free</div>
             <div className="text-right">Rate (₹)</div>
-            <div className="text-right">Disc (₹)</div>
+            <div className="text-right">Disc % / ₹</div>
             <div className="text-right">Amount</div>
             <div></div>
           </div>
@@ -627,8 +647,27 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                     <input type="number" min="0" step="0.01" value={item.rate || ''} onChange={e => handleItemChange(index, 'rate', e.target.value)} onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none" />
                   </div>
                   <div className="flex flex-col justify-center">
-                    <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Disc (₹)</label>
-                    <input type="number" min="0" step="0.01" value={item.discount_amount === 0 ? '' : item.discount_amount} onChange={e => handleItemChange(index, 'discount_amount', e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none text-red-600" />
+                    <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Disc % / ₹</label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.discount === 0 ? '' : item.discount}
+                        onChange={e => handleItemDiscountPctChange(index, e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none text-red-600"
+                        placeholder="%"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.discount_amount === 0 ? '' : item.discount_amount}
+                        onChange={e => handleItemDiscountAmtChange(index, e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-3 md:p-1.5 min-h-[44px] text-right focus:border-indigo-500 outline-none text-red-600"
+                        placeholder="₹"
+                      />
+                    </div>
                   </div>
                 </div>
 
