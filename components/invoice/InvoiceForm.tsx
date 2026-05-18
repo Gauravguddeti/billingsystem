@@ -134,7 +134,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     setTaxBillMode(false);
     setOverallDiscPct(0);
     setInvoiceDate(new Date().toLocaleDateString('en-CA'));
-    setCategoryId('');
     setIsSaved(true);
     
     // Refresh invoice number
@@ -353,25 +352,38 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 {isDraftRestored && !isEditMode && <p className="text-xs text-orange-500 font-medium">Draft restored</p>}
-                {(customerName || items.some(i => i.item_name)) && (
-                  <p className={`text-xs font-semibold ${isSaved ? 'text-green-600' : 'text-red-500'}`}>
-                    {isSaved ? '• Saved' : '• Not saved'}
-                  </p>
-                )}
+                <p className={`text-xs font-semibold ${isSaved ? 'text-green-600' : 'text-red-500'}`}>
+                  {isSaved ? '• Saved' : '• Not saved'}
+                </p>
               </div>
             </div>
 
             <div className="flex-1 w-full md:w-auto flex justify-start md:justify-center">
-              <div className="w-full md:w-[220px]">
-                <div className="text-xs font-semibold text-gray-500 mb-1 text-left md:text-center">Bill Type</div>
-                <select
-                  value={taxBillMode ? 'tax' : 'normal'}
-                  onChange={(e) => setTaxBillMode(e.target.value === 'tax')}
-                  className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-base rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2 font-bold cursor-pointer transition w-full"
-                >
-                  <option value="normal">📄 Normal Bill</option>
-                  <option value="tax">🧾 Tax Bill (GST)</option>
-                </select>
+              <div className="w-full md:w-auto flex flex-col md:flex-row gap-4 md:gap-3">
+                <div className="w-full md:w-[220px]">
+                  <div className="text-xs font-semibold text-gray-500 mb-1 text-left md:text-center">Bill Type</div>
+                  <select
+                    value={taxBillMode ? 'tax' : 'normal'}
+                    onChange={(e) => setTaxBillMode(e.target.value === 'tax')}
+                    className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-base rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2 font-bold cursor-pointer transition w-full"
+                  >
+                    <option value="normal">📄 Normal Bill</option>
+                    <option value="tax">🧾 Tax Bill (GST)</option>
+                  </select>
+                </div>
+                <div className="w-full md:w-[220px]">
+                  <div className="text-xs font-semibold text-gray-500 mb-1 text-left md:text-center">Category</div>
+                  <select
+                    value={categoryId}
+                    onChange={e => setCategoryId(e.target.value)}
+                    className="bg-white border border-gray-200 text-gray-800 text-base rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2 font-semibold cursor-pointer transition w-full"
+                  >
+                    <option value="">— All Products —</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -470,19 +482,6 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
           </div>
 
           <div className="flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
-              <select
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full md:w-64 border-2 border-gray-200 rounded-lg p-3 md:p-2.5 min-h-[44px] focus:border-indigo-500 outline-none transition text-gray-900 bg-white"
-              >
-                <option value="">— All Products —</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Invoice Date</label>
               <input
