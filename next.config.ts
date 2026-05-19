@@ -53,10 +53,8 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Webpack optimizations
-  webpack(config) {
-    return config;
-  },
+  // Silence Turbopack vs Webpack warning on Vercel
+  turbopack: {},
 };
 
 export default nextConfig;
