@@ -33,14 +33,27 @@ export function useInvoice() {
   const [categoryId, setCategoryId] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [isDraftRestored, setIsDraftRestored] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // 1. Draft restore on mount
   useEffect(() => {
     if (editingInvoiceId) return; // never restore draft in edit mode
+
+    // Do not restore draft if we are duplicating or creating a credit note
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('duplicate') === '1' || params.get('credit_note') === '1') {
+        return;
+      }
+    }
+
     const draft = localStorage.getItem('invoiceDraft');
     if (draft) {
       try {
         const parsed = JSON.parse(draft);
+        // Only restore if draft has meaningful content
+        const hasContent = parsed.customerName?.trim() || parsed.items?.some((i: InvoiceItem) => i.item_name?.trim());
+        if (!hasContent) return;
         setCustomerName(parsed.customerName || '');
         setCustomerPhone(parsed.customerPhone || '');
         setCustomerAddress(parsed.customerAddress || '');
@@ -51,21 +64,25 @@ export function useInvoice() {
         setOverallDiscount(parsed.overallDiscount || 0);
         setCategoryId(parsed.categoryId || '');
         setIsDraftRestored(true);
+        if (parsed.savedAt) setLastSaved(new Date(parsed.savedAt));
       } catch (e) {
         console.error('Failed to parse draft', e);
       }
     }
   }, [editingInvoiceId]);
 
-  // 2. Draft auto-save
+  // 2. Draft auto-save — only when form has content and not in edit mode
   useEffect(() => {
-    if (!isEditMode && invoiceDate) {
-      // only save draft when NOT in edit mode
-      localStorage.setItem('invoiceDraft', JSON.stringify({
-        customerName, customerPhone, customerAddress, customerGstin,
-        items, invoiceDate, taxInclusive, overallDiscount, categoryId
-      }));
-    }
+    if (isEditMode) return;
+    const hasContent = customerName.trim() || items.some(i => i.item_name.trim());
+    if (!hasContent) return; // don't overwrite a real draft with blank state
+    const now = new Date();
+    localStorage.setItem('invoiceDraft', JSON.stringify({
+      customerName, customerPhone, customerAddress, customerGstin,
+      items, invoiceDate, taxInclusive, overallDiscount, categoryId,
+      savedAt: now.toISOString(),
+    }));
+    setLastSaved(now);
   }, [customerName, customerPhone, customerAddress, customerGstin, items, invoiceDate, taxInclusive, overallDiscount, categoryId, isEditMode]);
 
   return {
@@ -80,6 +97,7 @@ export function useInvoice() {
     categoryId, setCategoryId,
     editingInvoiceId, setEditingInvoiceId,
     isEditMode, setIsEditMode,
-    isDraftRestored, setIsDraftRestored
+    isDraftRestored, setIsDraftRestored,
+    lastSaved,
   };
 }

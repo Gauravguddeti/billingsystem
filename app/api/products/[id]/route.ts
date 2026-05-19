@@ -16,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (existing.length === 0) return Response.json({ error: 'Not found or unauthorized' }, { status: 404 });
     
     const body = await request.json();
-    const { name, rate, mrp, hsn, category_id } = body;
+    const { name, rate, mrp, hsn, category_id, stock_qty } = body;
     
     if (!name) return Response.json({ error: 'Product name is required' }, { status: 400 });
 
@@ -27,6 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         mrp = ${mrp || 0},
         hsn = ${hsn || '33074100'},
         category_id = ${category_id || null},
+        stock_qty = ${stock_qty !== undefined && stock_qty !== '' ? Number(stock_qty) : null},
         updated_at = NOW()
       WHERE id = ${id} AND user_id = ${user.id}
       RETURNING *

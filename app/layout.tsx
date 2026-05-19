@@ -3,11 +3,11 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Smart GST Billing',
-  description: 'AI-powered GST billing and order extraction',
+  title: 'Smart GST Billing — Professional Invoicing',
+  description: 'AI-powered GST billing, invoice management, and GSTR-1 export for Indian businesses.',
 };
 
 export default function RootLayout({
@@ -35,10 +35,9 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} font-sans bg-gray-50 min-h-screen text-gray-900`}>
+      <body className={inter.className}>
         {children}
       </body>
     </html>
   );
 }
-

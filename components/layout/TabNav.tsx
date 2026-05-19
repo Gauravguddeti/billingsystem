@@ -39,13 +39,16 @@ export function TabNav() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 rounded-lg transition whitespace-nowrap text-[10px] md:text-sm font-medium w-full md:w-auto ${
-                  isActive 
-                    ? 'text-indigo-600 md:bg-indigo-600 md:text-white md:shadow-md' 
-                    : 'text-gray-500 hover:text-gray-900 md:bg-white md:text-gray-700 md:hover:bg-gray-100 md:border md:border-gray-200'
-                }`}
+                className={`flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 rounded-lg transition whitespace-nowrap text-[10px] md:text-sm font-medium w-full md:w-auto`}
+                style={isActive
+                  ? { color: 'var(--color-primary)' }
+                  : { color: '#6B7280' }
+                }
               >
-                <Icon className={`w-6 h-6 md:w-4 md:h-4 ${isActive ? 'text-indigo-600 md:text-white' : 'text-gray-400 md:text-gray-700'}`} />
+                <Icon
+                  className="w-6 h-6 md:w-4 md:h-4"
+                  style={{ color: isActive ? 'var(--color-primary)' : undefined }}
+                />
                 <span>{tab.label}</span>
               </Link>
             );

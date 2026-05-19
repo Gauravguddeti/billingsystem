@@ -19,7 +19,7 @@ export function ProductList() {
   
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', rate: '', mrp: '', hsn: '', category_id: '' });
+  const [formData, setFormData] = useState({ name: '', rate: '', mrp: '', hsn: '', category_id: '', stock_qty: '' });
   
   const [actionSheetProduct, setActionSheetProduct] = useState<Product | null>(null);
   const [showMoveCategory, setShowMoveCategory] = useState(false);
@@ -46,7 +46,8 @@ export function ProductList() {
       rate: Number(formData.rate) || 0,
       mrp: Number(formData.mrp) || 0,
       hsn: formData.hsn,
-      category_id: formData.category_id || null
+      category_id: formData.category_id || null,
+      stock_qty: formData.stock_qty !== '' ? Number(formData.stock_qty) : null,
     };
 
     const url = editingId ? `/api/products/${editingId}` : '/api/products';
@@ -114,13 +115,13 @@ export function ProductList() {
     return <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
-  const inputCls = "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-gray-900";
+  const inputCls = "w-full px-4 py-2 border rounded-lg outline-none transition text-gray-900 min-h-[44px]";
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
-        <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">Product List</h2>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Product List</h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative flex-1 sm:w-64">
@@ -130,16 +131,19 @@ export function ProductList() {
               placeholder="Search products or HSN..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 outline-none transition text-gray-900"
+              className="w-full pl-9 pr-4 py-2 border rounded-lg outline-none transition text-gray-900"
+              style={{ borderColor: 'var(--color-border)' }}
+              onFocus={e => (e.target.style.borderColor = 'var(--color-primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--color-border)')}
             />
           </div>
           <button 
             onClick={() => {
               setShowForm(true);
               setEditingId(null);
-              setFormData({ name: '', rate: '', mrp: '', hsn: '', category_id: categoryFilter !== 'all' ? categoryFilter : '' });
+              setFormData({ name: '', rate: '', mrp: '', hsn: '', category_id: categoryFilter !== 'all' ? categoryFilter : '', stock_qty: '' });
             }}
-            className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg transition font-semibold flex items-center gap-2 whitespace-nowrap"
+            className="btn-primary flex items-center gap-2 whitespace-nowrap px-5 py-2"
           >
             <Plus className="w-4 h-4 md:w-5 md:h-5" /> Add Product
           </button>
@@ -153,7 +157,7 @@ export function ProductList() {
           onDragOver={e => { e.preventDefault(); setDragOverCategory('all'); }}
           onDragLeave={() => setDragOverCategory(null)}
           onDrop={e => handleCategoryDrop(e, null)}
-          className={`px-4 py-2 rounded-lg font-semibold transition ${categoryFilter === 'all' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${dragOverCategory === 'all' ? 'ring-4 ring-purple-300 scale-105' : ''}`}
+          className={`px-4 py-2 rounded-lg font-semibold transition text-sm ${categoryFilter === 'all' ? 'btn-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${dragOverCategory === 'all' ? 'ring-2 ring-offset-1 scale-105' : ''}`}
         >
           All ({products.length})
         </button>
@@ -164,7 +168,7 @@ export function ProductList() {
             onDragOver={e => { e.preventDefault(); setDragOverCategory(cat.id); }}
             onDragLeave={() => setDragOverCategory(null)}
             onDrop={e => handleCategoryDrop(e, cat.id)}
-            className={`px-4 py-2 rounded-lg font-semibold transition ${categoryFilter === cat.id ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${dragOverCategory === cat.id ? 'ring-4 ring-purple-300 scale-105' : ''}`}
+            className={`px-4 py-2 rounded-lg font-semibold transition text-sm ${categoryFilter === cat.id ? 'btn-primary' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} ${dragOverCategory === cat.id ? 'ring-2 ring-offset-1 scale-105' : ''}`}
           >
             {cat.name} ({products.filter(p => p.category_id === cat.id).length})
           </button>
@@ -173,7 +177,7 @@ export function ProductList() {
 
       {/* Add/Edit Form Inline (Top) */}
       {showForm && !editingId && (
-        <div className="mb-6 p-4 md:p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200">
+        <div className="mb-6 p-4 md:p-6 rounded-xl border" style={{ background: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}>
           <h3 className="font-bold mb-4 text-lg text-gray-800">Add New Product</h3>
           <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
             <div className="lg:col-span-2">
@@ -194,7 +198,7 @@ export function ProductList() {
               <label className="block text-xs font-semibold text-gray-500 mb-1">HSN Code</label>
               <input type="text" placeholder="33074100" value={formData.hsn} onChange={e => setFormData({ ...formData, hsn: e.target.value })} className={`${inputCls} min-h-[44px]`} />
             </div>
-            <div className="lg:col-span-2">
+            <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Bill Category</label>
               <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className={`${inputCls} min-h-[44px]`}>
                 <option value="">— No Category —</option>
@@ -203,10 +207,14 @@ export function ProductList() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Stock Qty</label>
+              <input type="number" placeholder="Optional" value={formData.stock_qty} onChange={e => setFormData({ ...formData, stock_qty: e.target.value })} className={`${inputCls} min-h-[44px]`} />
+            </div>
           </div>
           <div className="flex flex-col md:flex-row gap-3 mt-4">
-            <button onClick={() => handleSave()} disabled={!formData.name} className="flex-1 md:flex-none bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 md:py-2 min-h-[44px] rounded-lg hover:opacity-90 transition font-bold md:font-semibold disabled:opacity-50">Save</button>
-            <button onClick={() => setShowForm(false)} className="flex-1 md:flex-none bg-gray-200 md:bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 md:py-2 min-h-[44px] rounded-lg transition font-bold md:font-semibold">Cancel</button>
+            <button onClick={() => handleSave()} disabled={!formData.name} className="btn-primary flex-1 md:flex-none px-6 min-h-[44px] disabled:opacity-50">Save</button>
+            <button onClick={() => setShowForm(false)} className="btn-secondary flex-1 md:flex-none px-6 min-h-[44px]">Cancel</button>
           </div>
         </div>
       )}
@@ -229,6 +237,7 @@ export function ProductList() {
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3 text-right">MRP (₹)</th>
                   <th className="px-4 py-3 text-right">Rate (₹)</th>
+                  <th className="px-4 py-3 text-center">Stock</th>
                   <th className="px-4 py-3 text-center w-24">Actions</th>
                 </tr>
               </thead>
@@ -240,16 +249,17 @@ export function ProductList() {
                   if (isEditing) {
                     return (
                       <tr key={p.id} className="bg-purple-50">
-                        <td colSpan={7} className="px-4 py-4 border-2 border-purple-200 shadow-sm">
+                        <td colSpan={8} className="px-4 py-4 border-2 border-purple-200 shadow-sm">
                           <div className="flex flex-col md:flex-row gap-3 items-center">
                             <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputCls} placeholder="Name" />
-                            <input type="text" value={formData.hsn} onChange={e => setFormData({...formData, hsn: e.target.value})} className={`${inputCls} w-32`} placeholder="HSN" />
+                            <input type="text" value={formData.hsn} onChange={e => setFormData({...formData, hsn: e.target.value})} className={`${inputCls} w-24`} placeholder="HSN" />
                             <select value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value})} className={inputCls}>
                               <option value="">— Category —</option>
                               {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                             </select>
-                            <input type="number" step="0.01" value={formData.mrp} onChange={e => setFormData({...formData, mrp: e.target.value})} className={`${inputCls} w-24 text-right`} placeholder="MRP" />
-                            <input type="number" step="0.01" value={formData.rate} onChange={e => setFormData({...formData, rate: e.target.value})} className={`${inputCls} w-24 text-right`} placeholder="Rate" />
+                            <input type="number" step="0.01" value={formData.mrp} onChange={e => setFormData({...formData, mrp: e.target.value})} className={`${inputCls} w-20 text-right`} placeholder="MRP" />
+                            <input type="number" step="0.01" value={formData.rate} onChange={e => setFormData({...formData, rate: e.target.value})} className={`${inputCls} w-20 text-right`} placeholder="Rate" />
+                            <input type="number" value={formData.stock_qty} onChange={e => setFormData({...formData, stock_qty: e.target.value})} className={`${inputCls} w-16 text-center`} placeholder="Qty" />
                             <div className="flex gap-2">
                               <button onClick={() => handleSave()} className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 font-semibold text-sm">Save</button>
                               <button onClick={() => setEditingId(null)} className="bg-gray-300 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-400 font-semibold text-sm">Cancel</button>
@@ -279,10 +289,19 @@ export function ProductList() {
                       <td className="px-4 py-3 text-right text-gray-500 line-through decoration-red-300">{p.mrp ? `₹${p.mrp}` : '—'}</td>
                       <td className="px-4 py-3 text-right font-bold text-purple-600">₹{p.rate}</td>
                       <td className="px-4 py-3 text-center">
+                        {p.stock_qty == null ? (
+                          <span className="text-gray-400 text-xs">—</span>
+                        ) : (
+                          <span className={`${Number(p.stock_qty) < 10 ? 'text-red-600 font-bold' : 'text-gray-700'} text-sm`}>
+                            {Number(p.stock_qty) < 10 ? '⚠ ' : ''}{p.stock_qty}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
                         <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => {
                             setEditingId(p.id);
-                            setFormData({ name: p.name, rate: p.rate?.toString() || '', mrp: p.mrp?.toString() || '', hsn: p.hsn || '', category_id: p.category_id || '' });
+                            setFormData({ name: p.name, rate: p.rate?.toString() || '', mrp: p.mrp?.toString() || '', hsn: p.hsn || '', category_id: p.category_id || '', stock_qty: p.stock_qty?.toString() || '' });
                             setShowForm(false);
                           }} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded transition">
                             <Edit2 className="w-4 h-4" />
@@ -307,7 +326,7 @@ export function ProductList() {
               
               if (isEditing) {
                 return (
-                  <div key={p.id} className="bg-purple-50 p-4 rounded-xl border-2 border-purple-300 shadow-sm flex flex-col gap-3">
+                  <div key={p.id} className="p-4 rounded-xl border-2 flex flex-col gap-3" style={{ background: '#EEF2FF', borderColor: 'var(--color-primary)' }}>
                     <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={`${inputCls} min-h-[44px]`} placeholder="Name" />
                     <div className="grid grid-cols-2 gap-3">
                       <input type="text" value={formData.hsn} onChange={e => setFormData({...formData, hsn: e.target.value})} className={`${inputCls} min-h-[44px]`} placeholder="HSN" />
@@ -321,8 +340,8 @@ export function ProductList() {
                       <input type="number" step="0.01" value={formData.rate} onChange={e => setFormData({...formData, rate: e.target.value})} className={`${inputCls} min-h-[44px]`} placeholder="Rate" />
                     </div>
                     <div className="flex gap-2 mt-2">
-                      <button onClick={() => handleSave()} className="flex-1 bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 font-bold text-lg">Save</button>
-                      <button onClick={() => setEditingId(null)} className="flex-1 bg-gray-300 text-gray-800 p-3 rounded-lg hover:bg-gray-400 font-bold text-lg">Cancel</button>
+                      <button onClick={() => handleSave()} className="btn-primary flex-1 p-3 text-lg">Save</button>
+                      <button onClick={() => setEditingId(null)} className="btn-secondary flex-1 p-3 text-lg">Cancel</button>
                     </div>
                   </div>
                 );
@@ -365,7 +384,8 @@ export function ProductList() {
                 setEditingId(actionSheetProduct.id);
                 setFormData({
                   name: actionSheetProduct.name, rate: String(actionSheetProduct.rate),
-                  mrp: String(actionSheetProduct.mrp), hsn: actionSheetProduct.hsn || '', category_id: actionSheetProduct.category_id || ''
+                  mrp: String(actionSheetProduct.mrp), hsn: actionSheetProduct.hsn || '', category_id: actionSheetProduct.category_id || '',
+                  stock_qty: actionSheetProduct.stock_qty != null ? String(actionSheetProduct.stock_qty) : ''
                 });
                 setActionSheetProduct(null);
               }} className="w-full bg-blue-50 text-blue-700 p-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 active:bg-blue-100">

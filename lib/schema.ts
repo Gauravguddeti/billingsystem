@@ -55,6 +55,7 @@ export interface Product {
   rate?: number;
   mrp?: number;
   hsn?: string;
+  stock_qty?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -75,16 +76,21 @@ export interface Invoice {
   subtotal: number;
   discount_amount?: number;
   after_discount: number;
+  taxable_amount?: number;
   cgst: number;
   sgst: number;
+  igst?: number;
   grand_total: number;
   total_quantity: number;
   total_items: number;
   amount_words?: string;
-  payment_status?: string;
+  payment_status?: 'unpaid' | 'paid' | 'partial';
+  paid_at?: string;
   amount_paid?: number;
-  payment_date?: string;
   payment_notes?: string;
+  type?: 'invoice' | 'credit_note';
+  reference_invoice_id?: string;
+  is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
 }

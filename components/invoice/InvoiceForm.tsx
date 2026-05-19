@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+
 import { useInvoice, defaultRow } from '@/hooks/useInvoice';
 import { calculateTotals, numberToWords, generateNextInvoiceNumber } from '@/lib/invoice-utils';
 import { InvoicePrint } from './InvoicePrint';
@@ -24,7 +25,8 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     editingInvoiceId, setEditingInvoiceId,
     isEditMode, setIsEditMode,
     isDraftRestored,
-    categoryId, setCategoryId
+    categoryId, setCategoryId,
+    lastSaved,
   } = useInvoice();
 
   const [invoiceNumber, setInvoiceNumber] = useState('INV-001');
@@ -47,8 +49,9 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   
   const [saving, setSaving] = useState(false);
-  const [businessData, setBusinessData] = useState<any>(null); // To pass to InvoicePrint
+  const [businessData, setBusinessData] = useState<any>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isCreditNote, setIsCreditNote] = useState(false);
 
   const [isSaved, setIsSaved] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -106,7 +109,32 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     }
   }, [initialInvoiceId]);
 
-  // Fetch next invoice number
+  // Handle duplicate prefill from sessionStorage
+  // NOTE: do NOT removeItem here — React 18 Strict Mode double-invokes effects in dev,
+  // so removing on first run means second run finds nothing. Cleared in handleSave instead.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isDuplicate = params.get('duplicate') === '1';
+
+    if (isDuplicate) {
+      try {
+        const raw = sessionStorage.getItem('duplicateInvoice');
+        if (!raw) return;
+        const src = JSON.parse(raw);
+        setCustomerName(src.customer_name || '');
+        setCustomerAddress(src.customer_address || '');
+        setCustomerPhone(src.customer_phone || '');
+        setCustomerGstin(src.customer_gstin || '');
+        setTaxBillMode(src.tax_inclusive || false);
+        setOverallDiscount(src.discount || 0);
+        setCategoryId(src.category_id || '');
+        if (src.items?.length) {
+          setItems(src.items.map((i: any) => ({ ...defaultRow, ...i, quantity: Number(i.quantity), rate: Number(i.rate) })));
+        }
+      } catch (e) { console.error('Duplicate prefill error', e); }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isEditMode && !editingInvoiceId) {
       fetch('/api/invoices?limit=1').then(res => res.json()).then(data => {
@@ -211,7 +239,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
     }
 
     setSaving(true);
-    const payload = {
+    const payload: any = {
       invoice_number: invoiceNumber,
       date: invoiceDate,
       customer_name: customerName,
@@ -230,6 +258,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
       total_items: validItemCount,
       amount_words: numberToWords(Math.round(grandTotal)),
       category_id: categoryId || null,
+      type: isCreditNote ? 'credit_note' : 'invoice',
       items: processedItems.filter(i => i.item_name).map(i => ({
         ...i,
         free_qty: Number(i.free_qty) || 0,
@@ -252,8 +281,9 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
       setToast({ message: '✅ Invoice saved — review and print when ready', type: 'success', onClose: () => setToast(null) });
       setIsSaved(true);
       
-      // DO NOT clear form automatically, allow printing!
-      // But we can clear the draft and edit mode so refreshing doesn't bring it back as a draft
+      // Clear prefill data after successful save
+      sessionStorage.removeItem('duplicateInvoice');
+      sessionStorage.removeItem('creditNoteSource');
       setIsEditMode(false);
       setEditingInvoiceId(null);
       localStorage.removeItem('invoiceDraft');
@@ -367,13 +397,25 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
           {/* Header Actions */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-6 border-b border-gray-200 gap-4">
             <div className="flex flex-col">
-              <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
-                {isEditMode ? `Edit ${invoiceNumber}` : 'New Invoice'}
+              <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                {isEditMode ? `Edit ${invoiceNumber}` : isCreditNote ? 'New Credit Note' : 'New Invoice'}
               </h2>
-              <div className="flex items-center gap-2 mt-1">
-                {isDraftRestored && !isEditMode && <p className="text-xs text-orange-500 font-medium">Draft restored</p>}
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {isDraftRestored && !isEditMode && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#FFF7ED', color: '#C2410C' }}>
+                    Draft restored
+                  </span>
+                )}
+                {lastSaved && !isEditMode && (
+                  <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--color-success)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Auto-saved {Math.floor((Date.now() - lastSaved.getTime()) / 60000) < 1
+                      ? 'just now'
+                      : `${Math.floor((Date.now() - lastSaved.getTime()) / 60000)}m ago`}
+                  </span>
+                )}
                 <p className={`text-xs font-semibold ${isSaved ? 'text-green-600' : 'text-red-500'}`}>
-                  {isSaved ? '• Saved' : '• Not saved'}
+                  {isSaved ? '• Saved' : '• Unsaved'}
                 </p>
               </div>
             </div>
@@ -440,7 +482,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                 onError={(msg) => setToast({ message: msg, type: 'error', onClose: () => setToast(null) })}
               />
               <div className="hidden md:flex items-center gap-3">
-                <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-semibold disabled:opacity-50 text-center min-h-[44px]">
+                <button onClick={handleSave} disabled={saving} className="btn-primary px-5 py-2 min-h-[44px] disabled:opacity-50">
                   {saving ? 'Saving...' : '💾 Save'}
                 </button>
                 {validItemCount > 0 && (
@@ -581,7 +623,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                 
                 {/* Mobile Top Row: Item Name & Delete */}
                 <div className="flex md:contents justify-between gap-2 relative">
-                  <div className="flex-1 relative">
+                  <div className="flex-1 relative md:self-center">
                     <label className="md:hidden text-xs text-gray-500 font-semibold mb-1 block">Item Name</label>
                     <input 
                       type="text" 
@@ -844,7 +886,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
                document.title = `${invoiceNumber}_${sanitizedCustomer}_${invoiceDate}`;
                window.print();
                setTimeout(() => { document.title = originalTitle; }, 500);
-            }} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 py-2 rounded-lg font-bold shadow-md active:opacity-80 flex items-center gap-2">
+            }} className="btn-primary px-5 py-2 flex items-center gap-2">
               🖨 Print / PDF
             </button>
           </div>
@@ -882,7 +924,7 @@ export function InvoiceForm({ initialInvoiceId }: { initialInvoiceId?: string })
       />
       {/* Mobile Sticky Action Bar */}
       <div className="md:hidden fixed bottom-[60px] left-0 right-0 bg-white border-t border-gray-200 p-3 flex gap-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-40 no-print">
-         <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg font-bold flex-1 min-h-[48px] shadow-md">
+         <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 min-h-[48px]">
            {saving ? 'Saving...' : '💾 Save'}
          </button>
          {validItemCount > 0 && (
